@@ -1,60 +1,160 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08131f">
-<meta name="description" content="Painel independente de leitura matemática da apuração presidencial de 2026 com dados oficiais do TSE.">
-<title>Apuração 2026 • Maioria no 1º turno</title>
-<link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin><link rel="stylesheet" href="styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#07111c">
+<meta name="description" content="Painel independente para leitura matemática em tempo real da apuração presidencial de 2026 com dados oficiais do TSE.">
+<meta property="og:title" content="Apuração 2026 • Painel matemático">
+<meta property="og:description" content="Dados oficiais do TSE, limites matemáticos, cenários e evolução observada em tempo real.">
+<title>Apuração 2026 • Painel matemático</title>
+<link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="enhanced.css">
 </head>
 <body>
 <header class="topbar">
-<a class="brand" href="#inicio"><span class="brand-mark">26</span><span><strong>Apuração 2026</strong><small>Presidência • 1º turno</small></span></a>
-<div class="pill" id="sourcePill" role="status"><span class="dot"></span><span id="sourceStatus">Conectando ao TSE…</span></div>
+  <a class="brand" href="#inicio" aria-label="Ir ao início">
+    <span class="brand-mark">26</span>
+    <span><strong>Apuração 2026</strong><small>Presidência • 1º turno</small></span>
+  </a>
+  <div class="live-cluster">
+    <div class="countdown" id="countdown" aria-label="Tempo para a próxima atualização">
+      <span class="countdown-ring" id="countdownRing"><b id="countdownValue">—</b></span>
+      <span><strong>Próxima leitura</strong><small id="countdownLabel">conectando…</small></span>
+    </div>
+    <div class="pill" id="sourcePill" role="status" aria-live="polite"><span class="dot"></span><span id="sourceStatus">Conectando ao TSE…</span></div>
+  </div>
 </header>
+
 <main id="inicio" class="shell">
 <section class="hero">
-<div><p class="eyebrow">MAIORIA ABSOLUTA DOS VOTOS VÁLIDOS</p><h1>O que a apuração já permite afirmar — matematicamente.</h1>
-<p class="lead">Dados oficiais do TSE, atualização automática e cenários sem previsão eleitoral. O painel mede apenas condições matemáticas para ultrapassar 50% dos votos válidos.</p></div>
-<div class="hero-actions"><label for="candidateSelect">Candidato analisado</label><select id="candidateSelect" disabled><option>Carregando candidatos…</option></select><button class="ghost" id="refreshButton">Atualizar agora</button></div>
+  <div>
+    <p class="eyebrow">PAINEL MATEMÁTICO  • DADOS OFICIAIS</p>
+    <h1>A apuração, traduzida em limites que a matemática já permite afirmar.</h1>
+    <p class="lead">Atualização automática, evolução observada, envelope de resultados possíveis e análise de sensibilidade. Sem pesquisa, previsão eleitoral ou probabilidade de vitória.</p>
+  </div>
+  <div class="hero-control">
+    <label for="candidateSelect">Candidatura analisada</label>
+    <select id="candidateSelect" disabled><option>Carregando candidaturas…</option></select>
+    <div class="sync-strip">
+      <span><i id="syncPulse"></i><strong id="syncText">Sincronizando</strong></span>
+      <small id="dataAge">idade do dado: —</small>
+    </div>
+  </div>
 </section>
-<div class="notice waiting" id="notice" role="status">Aguardando os primeiros dados oficiais da totalização.</div>
-<section class="overview">
-<article class="share-card card"><div class="ring" id="shareRing"><div><strong id="candidateShare">—</strong><span>dos válidos apurados</span></div></div>
-<div class="share-meta"><p class="eyebrow">AGORA</p><h2 id="candidateName">Aguardando dados</h2><p id="candidateParty">—</p><div class="fifty"><span>Referência do 1º turno</span><strong>50% + 1 voto válido</strong></div></div></article>
-<article class="card metric"><span>Seções totalizadas</span><strong id="sectionsPct">—</strong><small id="sectionsCount">—</small></article>
-<article class="card metric"><span>Votos válidos apurados</span><strong id="validVotes">—</strong><small id="totalVotes">—</small></article>
-<article class="card metric"><span>Votos do candidato</span><strong id="candidateVotes">—</strong><small id="candidateBallot">—</small></article>
-<article class="card metric"><span>Distância para 50% dos válidos já apurados</span><strong id="halfDelta">—</strong><small id="halfDeltaLabel">—</small></article>
+
+<div class="notice waiting" id="notice" role="status" aria-live="polite">Aguardando os primeiros dados oficiais da totalização.</div>
+
+<section class="overview" aria-label="Resumo nacional">
+  <article class="share-card card">
+    <div class="ring" id="shareRing"><div><strong id="candidateShare">—</strong><span>dos válidos apurados</span></div></div>
+    <div class="share-meta">
+      <p class="eyebrow">SITUAÇÃO NACIONAL AGORA</p>
+      <h2 id="candidateName">Aguardando dados</h2>
+      <p id="candidateParty">—</p>
+      <div class="threshold-track" aria-label="Referência de 50 por cento">
+        <div class="threshold-bar"><span class="threshold-fill" id="thresholdFill"></span><i></i></div>
+        <div class="threshold-labels"><span>0%</span><strong>50% + 1 voto válido</strong><span>100%</span></div>
+      </div>
+    </div>
+  </article>
+  <article class="card metric"><span>Seções totalizadas</span><strong id="sectionsPct">—</strong><small id="sectionsCount">—</small></article>
+  <article class="card metric"><span>Votos válidos apurados</span><strong id="validVotes">—</strong><small id="totalVotes">—</small></article>
+  <article class="card metric"><span>Votos da candidatura</span><strong id="candidateVotes">—</strong><small id="candidateBallot">—</small></article>
+  <article class="card metric"><span>Distância para 50% dos válidos apurados</span><strong id="halfDelta">—</strong><small id="halfDeltaLabel">—</small></article>
 </section>
-<section class="card math"><div class="heading"><div><p class="eyebrow">ENVELOPE MATEMÁTICO</p><h2>O 1º turno ainda está matematicamente em aberto?</h2></div><span class="state-badge" id="mathState">Aguardando</span></div>
-<p class="summary" id="mathSummary">Assim que o TSE divulgar a totalização, o painel calculará limites absolutos usando o eleitorado das seções ainda não totalizadas.</p>
-<div class="math-grid">
-<div class="math-item"><span>Eleitores em seções ainda não totalizadas</span><strong id="remainingElectors">—</strong><small>Teto matemático de novos votos que ainda podem entrar.</small></div>
-<div class="math-item"><span>Votos adicionais no cenário mais conservador</span><strong id="worstCaseVotes">—</strong><small id="worstCaseShare">Considera 100% do eleitorado restante gerando voto válido.</small></div>
-<div class="math-item"><span>Maioria absoluta já garantida?</span><strong id="guaranteedStatus">—</strong><small>Teste extremo: zero votos adicionais para o candidato e todos os demais votos restantes válidos.</small></div>
-</div></section>
-<section class="card sim"><div class="heading"><div><p class="eyebrow">SIMULADOR DE CENÁRIOS</p><h2>Teste qualquer combinação para os votos que ainda podem entrar</h2></div><span class="neutral-tag">Não é previsão</span></div>
-<p class="subtle">Os controles não estimam probabilidades. Apenas aplicam a combinação escolhida aos números atuais.</p>
-<div class="sim-grid">
-<label class="range"><span>Do eleitorado restante, quanto vira voto válido?</span><strong id="validRateValue">100%</strong><input id="validRate" type="range" min="0" max="100" step="1" value="100"></label>
-<label class="range"><span>Desses novos votos válidos, qual parcela vai para o candidato?</span><strong id="candidateRateValue">50%</strong><input id="candidateRate" type="range" min="0" max="100" step=".1" value="50"></label>
-</div>
-<div class="scenario">
-<div><span>Resultado desse cenário</span><strong id="scenarioShare">—</strong></div>
-<div><span>Novos votos válidos</span><strong id="scenarioNewValid">—</strong></div>
-<div><span>Novos votos do candidato</span><strong id="scenarioCandidateVotes">—</strong></div>
-<div class="verdict" id="scenarioVerdict">Aguardando dados</div>
-</div></section>
-<section class="states"><div class="heading"><div><p class="eyebrow">BRASIL POR UF</p><h2>Mesma conta, estado por estado</h2></div><span class="neutral-tag" id="statesUpdated">—</span></div>
-<p class="subtle">UFs em ordem alfabética, com participação do candidato nos votos válidos já apurados e percentual de seções totalizadas.</p><div class="states-grid" id="statesGrid"></div></section>
-<section class="card method"><details><summary>Como os cálculos são feitos?</summary><div class="method-body">
-<p><strong>Maioria:</strong> votos computados do candidato divididos pelo total de votos válidos já computados pelo TSE.</p>
-<p><strong>Limite conservador:</strong> eleitores em seções ainda não totalizadas são tratados como o máximo possível de novos votos. É um limite matemático, não uma estimativa de comparecimento.</p>
-<p><strong>Garantia matemática:</strong> só aparece quando a candidatura permaneceria acima de 50% até no cenário extremo mais desfavorável permitido pelos números atuais.</p>
-<p><strong>Sem projeção:</strong> não são usadas pesquisas, histórico, tendência geográfica ou extrapolação estatística.</p>
-</div></details></section>
+
+<section class="analytics-grid" aria-label="Leitura matemática avançada">
+  <article class="card math hero-math">
+    <div class="heading"><div><p class="eyebrow">ENVELOPE MATEMÁTICO</p><h2>Intervalo final ainda possível</h2></div><span class="state-badge" id="mathState">Aguardando</span></div>
+    <p class="summary" id="mathSummary">O intervalo considera o eleitorado de seções ainda não totalizadas como teto absoluto de novos votos.</p>
+    <div class="envelope-visual" aria-label="Intervalo matemático de percentual final">
+      <div class="envelope-line"><span id="envelopeBand"></span><i class="fifty-marker"></i></div>
+      <div class="envelope-values"><div><small>Mínimo extremo</small><strong id="minFinalShare">—</strong></div><div class="center-ref"><small>Referência</small><strong>50%</strong></div><div><small>Máximo extremo</small><strong id="maxFinalShare">—</strong></div></div>
+    </div>
+    <div class="math-grid">
+      <div class="math-item"><span>Eleitores em seções ainda não totalizadas</span><strong id="remainingElectors">—</strong><small>Teto absoluto de novos votos que ainda podem entrar.</small></div>
+      <div class="math-item"><span>Parcela mínima do teto restante para ultrapassar 50%</span><strong id="worstCaseShareMetric">—</strong><small id="worstCaseVotes">—</small></div>
+      <div class="math-item"><span>Robustez matemática atual</span><strong id="bufferVotes">—</strong><small id="bufferLabel">—</small></div>
+    </div>
+  </article>
+
+  <article class="card delta-card">
+    <div class="heading compact"><div><p class="eyebrow">ÚLTIMA CARGA DO TSE</p><h2>O que mudou</h2></div><span class="neutral-tag" id="lastLoadTime">—</span></div>
+    <div class="delta-grid">
+      <div><span>Votos válidos novos</span><strong id="deltaValid">—</strong></div>
+      <div><span>Votos novos da candidatura</span><strong id="deltaCandidate">—</strong></div>
+      <div><span>Variação da participação</span><strong id="deltaShare">—</strong></div>
+      <div><span>Avanço de seções</span><strong id="deltaSections">—</strong></div>
+    </div>
+    <p class="subtle tiny">Variações descritivas entre duas cargas oficiais consecutivas. Não são tendência nem projeção.</p>
+  </article>
+</section>
+
+<section class="card history-card" aria-labelledby="historyTitle">
+  <div class="heading"><div><p class="eyebrow">EVOLUÇÃO OBSERVADA</p><h2 id="historyTitle">Participação nos votos válidos × avanço da totalização</h2></div><span class="neutral-tag" id="historyPoints">0 cargas</span></div>
+  <div class="chart-wrap"><svg id="historyChart" viewBox="0 0 1000 260" role="img" aria-label="Histórico da participação da candidatura nos votos válidos conforme a totalização avança"></svg></div>
+  <div class="chart-legend"><span><i class="legend-line"></i> participação nos válidos</span><span>eixo horizontal: % de seções totalizadas</span></div>
+</section>
+
+<section class="card sensitivity" aria-labelledby="sensitivityTitle">
+  <div class="heading"><div><p class="eyebrow">ANÁLISE DE SENSIBILIDADE</p><h2 id="sensitivityTitle">Quanto seria necessário entre os votos válidos que ainda entrarem?</h2></div><span class="neutral-tag">Condição matemática</span></div>
+  <p class="subtle">Escolha apenas quanto do eleitorado ainda não totalizado entraria como voto válido. O painel calcula a parcela desses novos votos válidos que seria necessária para terminar acima de 50%.</p>
+  <div class="sensitivity-control">
+    <label class="range"><span>Percentual do eleitorado restante que vira voto válido</span><strong id="validRateValue">100%</strong><input id="validRate" type="range" min="0" max="100" step="1" value="100"></label>
+    <div class="critical-result"><span>Participação necessária nos novos votos válidos</span><strong id="criticalShare">—</strong><small id="criticalVotes">—</small></div>
+  </div>
+  <div class="matrix-wrap">
+    <table class="matrix">
+      <thead><tr><th>Novos válidos sobre o teto restante</th><th>Novos votos válidos</th><th>Votos necessários da candidatura</th><th>Parcela necessária nesses novos válidos</th></tr></thead>
+      <tbody id="thresholdMatrix"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card sim" aria-labelledby="simTitle">
+  <div class="heading"><div><p class="eyebrow">SIMULADOR DETERMINÍSTICO</p><h2 id="simTitle">Teste uma combinação específica</h2></div><span class="neutral-tag">Não é previsão</span></div>
+  <p class="subtle">O primeiro controle define quantos novos votos válidos entram; o segundo, qual parcela deles vai para a candidatura selecionada.</p>
+  <div class="sim-grid">
+    <label class="range"><span>Do eleitorado restante, quanto vira voto válido?</span><strong id="simValidRateValue">100%</strong><input id="simValidRate" type="range" min="0" max="100" step="1" value="100"></label>
+    <label class="range"><span>Desses novos válidos, qual parcela vai para a candidatura?</span><strong id="candidateRateValue">50%</strong><input id="candidateRate" type="range" min="0" max="100" step=".1" value="50"></label>
+  </div>
+  <div class="scenario">
+    <div><span>Percentual final nesse cenário</span><strong id="scenarioShare">—</strong></div>
+    <div><span>Novos votos válidos</span><strong id="scenarioNewValid">—</strong></div>
+    <div><span>Novos votos da candidatura</span><strong id="scenarioCandidateVotes">—</strong></div>
+    <div class="verdict" id="scenarioVerdict">Aguardando dados</div>
+  </div>
+</section>
+
+<section class="states" aria-labelledby="statesTitle">
+  <div class="heading"><div><p class="eyebrow">BRASIL POR UF</p><h2 id="statesTitle">Leitura estado por estado</h2></div><span class="neutral-tag" id="statesUpdated">—</span></div>
+  <p class="subtle">UFs em ordem alfabética, com participação da candidatura nos votos válidos já apurados e percentual de seções totalizadas.</p>
+  <div class="states-grid" id="statesGrid"></div>
+</section>
+
+<section class="card method">
+<details>
+  <summary>Metodologia, limites e cadência de atualização</summary>
+  <div class="method-body">
+    <p><strong>Fonte:</strong> arquivos JSON oficiais de resultado unificado do Tribunal Superior Eleitoral.</p>
+    <p><strong>Atualização nacional:</strong> leitura automática a cada 3 segundos quando a aba está visível. As 27 UFs são atualizadas a cada 30 segundos. Em falhas consecutivas, o painel aumenta temporariamente o intervalo para não pressionar o serviço.</p>
+    <p><strong>Envelope final:</strong> usa como teto o eleitorado das seções ainda não totalizadas. O mínimo extremo considera zero votos adicionais para a candidatura e todo o teto restante como voto válido; o máximo extremo considera todo o teto restante como voto válido da candidatura.</p>
+    <p><strong>Análise de sensibilidade:</strong> para uma quantidade hipotética de novos votos válidos, resolve exatamente a desigualdade necessária para ultrapassar metade do total final de votos válidos.</p>
+    <p><strong>Histórico:</strong> registra somente cargas oficiais distintas observadas neste navegador. Variações são descritivas e não são extrapoladas.</p>
+    <p><strong>Sem previsão:</strong> o portal não atribui probabilidade de vitória, não usa pesquisas, inferência geográfica, tendência histórica ou modelo preditivo do resultado eleitoral.</p>
+  </div>
+</details>
+</section>
 </main>
-<footer><div><strong>Painel independente de acompanhamento</strong><p>Fonte dos resultados: Tribunal Superior Eleitoral (TSE). Sem vínculo institucional com o TSE.</p></div>
-<div class="footer-meta"><span id="lastUpdate">Última leitura: —</span><a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial</a></div></footer>
+
+<footer>
+  <div><strong>Painel independente de acompanhamento</strong><p>Fonte dos resultados: Tribunal Superior Eleitoral (TSE). Sem vínculo institucional com o TSE.</p></div>
+  <div class="footer-meta"><span id="lastUpdate">Última leitura: —</span><a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial do TSE</a></div>
+</footer>
+<script src="core.js" defer></script>
+<script src="analytics.js" defer></script>
 <script src="app.js" defer></script>
-</body></html>
+</body>
+</html>
