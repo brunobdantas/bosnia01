@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08131f">
+<meta name="description" content="Painel independente de leitura matemática da apuração presidencial de 2026 com dados oficiais do TSE.">
+<title>Apuração 2026 • Maioria no 1º turno</title>
+<link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+<a class="brand" href="#inicio"><span class="brand-mark">26</span><span><strong>Apuração 2026</strong><small>Presidência • 1º turno</small></span></a>
+<div class="pill" id="sourcePill" role="status"><span class="dot"></span><span id="sourceStatus">Conectando ao TSE…</span></div>
+</header>
+<main id="inicio" class="shell">
+<section class="hero">
+<div><p class="eyebrow">MAIORIA ABSOLUTA DOS VOTOS VÁLIDOS</p><h1>O que a apuração já permite afirmar — matematicamente.</h1>
+<p class="lead">Dados oficiais do TSE, atualização automática e cenários sem previsão eleitoral. O painel mede apenas condições matemáticas para ultrapassar 50% dos votos válidos.</p></div>
+<div class="hero-actions"><label for="candidateSelect">Candidato analisado</label><select id="candidateSelect" disabled><option>Carregando candidatos…</option></select><button class="ghost" id="refreshButton">Atualizar agora</button></div>
+</section>
+<div class="notice waiting" id="notice" role="status">Aguardando os primeiros dados oficiais da totalização.</div>
+<section class="overview">
+<article class="share-card card"><div class="ring" id="shareRing"><div><strong id="candidateShare">—</strong><span>dos válidos apurados</span></div></div>
+<div class="share-meta"><p class="eyebrow">AGORA</p><h2 id="candidateName">Aguardando dados</h2><p id="candidateParty">—</p><div class="fifty"><span>Referência do 1º turno</span><strong>50% + 1 voto válido</strong></div></div></article>
+<article class="card metric"><span>Seções totalizadas</span><strong id="sectionsPct">—</strong><small id="sectionsCount">—</small></article>
+<article class="card metric"><span>Votos válidos apurados</span><strong id="validVotes">—</strong><small id="totalVotes">—</small></article>
+<article class="card metric"><span>Votos do candidato</span><strong id="candidateVotes">—</strong><small id="candidateBallot">—</small></article>
+<article class="card metric"><span>Distância para 50% dos válidos já apurados</span><strong id="halfDelta">—</strong><small id="halfDeltaLabel">—</small></article>
+</section>
+<section class="card math"><div class="heading"><div><p class="eyebrow">ENVELOPE MATEMÁTICO</p><h2>O 1º turno ainda está matematicamente em aberto?</h2></div><span class="state-badge" id="mathState">Aguardando</span></div>
+<p class="summary" id="mathSummary">Assim que o TSE divulgar a totalização, o painel calculará limites absolutos usando o eleitorado das seções ainda não totalizadas.</p>
+<div class="math-grid">
+<div class="math-item"><span>Eleitores em seções ainda não totalizadas</span><strong id="remainingElectors">—</strong><small>Teto matemático de novos votos que ainda podem entrar.</small></div>
+<div class="math-item"><span>Votos adicionais no cenário mais conservador</span><strong id="worstCaseVotes">—</strong><small id="worstCaseShare">Considera 100% do eleitorado restante gerando voto válido.</small></div>
+<div class="math-item"><span>Maioria absoluta já garantida?</span><strong id="guaranteedStatus">—</strong><small>Teste extremo: zero votos adicionais para o candidato e todos os demais votos restantes válidos.</small></div>
+</div></section>
+<section class="card sim"><div class="heading"><div><p class="eyebrow">SIMULADOR DE CENÁRIOS</p><h2>Teste qualquer combinação para os votos que ainda podem entrar</h2></div><span class="neutral-tag">Não é previsão</span></div>
+<p class="subtle">Os controles não estimam probabilidades. Apenas aplicam a combinação escolhida aos números atuais.</p>
+<div class="sim-grid">
+<label class="range"><span>Do eleitorado restante, quanto vira voto válido?</span><strong id="validRateValue">100%</strong><input id="validRate" type="range" min="0" max="100" step="1" value="100"></label>
+<label class="range"><span>Desses novos votos válidos, qual parcela vai para o candidato?</span><strong id="candidateRateValue">50%</strong><input id="candidateRate" type="range" min="0" max="100" step=".1" value="50"></label>
+</div>
+<div class="scenario">
+<div><span>Resultado desse cenário</span><strong id="scenarioShare">—</strong></div>
+<div><span>Novos votos válidos</span><strong id="scenarioNewValid">—</strong></div>
+<div><span>Novos votos do candidato</span><strong id="scenarioCandidateVotes">—</strong></div>
+<div class="verdict" id="scenarioVerdict">Aguardando dados</div>
+</div></section>
+<section class="states"><div class="heading"><div><p class="eyebrow">BRASIL POR UF</p><h2>Mesma conta, estado por estado</h2></div><span class="neutral-tag" id="statesUpdated">—</span></div>
+<p class="subtle">UFs em ordem alfabética, com participação do candidato nos votos válidos já apurados e percentual de seções totalizadas.</p><div class="states-grid" id="statesGrid"></div></section>
+<section class="card method"><details><summary>Como os cálculos são feitos?</summary><div class="method-body">
+<p><strong>Maioria:</strong> votos computados do candidato divididos pelo total de votos válidos já computados pelo TSE.</p>
+<p><strong>Limite conservador:</strong> eleitores em seções ainda não totalizadas são tratados como o máximo possível de novos votos. É um limite matemático, não uma estimativa de comparecimento.</p>
+<p><strong>Garantia matemática:</strong> só aparece quando a candidatura permaneceria acima de 50% até no cenário extremo mais desfavorável permitido pelos números atuais.</p>
+<p><strong>Sem projeção:</strong> não são usadas pesquisas, histórico, tendência geográfica ou extrapolação estatística.</p>
+</div></details></section>
+</main>
+<footer><div><strong>Painel independente de acompanhamento</strong><p>Fonte dos resultados: Tribunal Superior Eleitoral (TSE). Sem vínculo institucional com o TSE.</p></div>
+<div class="footer-meta"><span id="lastUpdate">Última leitura: —</span><a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial</a></div></footer>
+<script src="app.js" defer></script>
+</body></html>
