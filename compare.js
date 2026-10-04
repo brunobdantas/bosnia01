@@ -84,16 +84,14 @@ function installCompareToggles(){
     const c=candidates.find(x=>String(x.sqcand)===id);
     if(!c)return;
     const on=comparedIds.includes(id);
-    const toggle=document.createElement('span');
+    const toggle=document.createElement('button');
+    toggle.type='button';
     toggle.className=`compare-toggle${on?' active':''}`;
-    toggle.setAttribute('role','button');
-    toggle.setAttribute('tabindex','0');
     toggle.setAttribute('aria-pressed',String(on));
+    toggle.setAttribute('aria-label',on?`Retirar ${c.nmu||c.nm||'candidatura'} da comparação`:`Adicionar ${c.nmu||c.nm||'candidatura'} à comparação`);
     toggle.title=on?'Retirar da comparação':'Adicionar à comparação';
     toggle.innerHTML=`<b>${on?'✓':'＋'}</b><small>${on?'fixada':'comparar'}</small>`;
-    const activate=e=>{e.preventDefault();e.stopPropagation();toggleCompareCandidate(c)};
-    toggle.addEventListener('click',activate);
-    toggle.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){activate(e)}});
+    toggle.addEventListener('click',()=>toggleCompareCandidate(c));
     row.appendChild(toggle);
   });
 }
@@ -169,12 +167,6 @@ createComparePanel();
 const baseRenderCandidateList=renderCandidateList;
 renderCandidateList=function(){
   baseRenderCandidateList();
-  document.querySelectorAll('.candidate-row').forEach(row=>{
-    const number=row.querySelector('.candidate-number')?.textContent?.trim();
-    const name=row.querySelector('strong')?.textContent?.trim();
-    const c=candidates.find(x=>String(x.n||'')===String(number||'')&&String(x.nmu||x.nm||'').trim()===String(name||'').trim());
-    if(c)row.dataset.sqcand=String(c.sqcand);
-  });
   installCompareToggles();
 };
 

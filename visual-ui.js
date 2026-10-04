@@ -17,9 +17,20 @@ function renderCandidateList(){
   const filtered=sorted.filter(c=>!q||`${c.n||''} ${c.nmu||c.nm||''} ${c.party||c.partyName||''}`.toLocaleLowerCase('pt-BR').includes(q)),shown=filtered.slice(0,120);
   host.innerHTML='';
   for(const c of shown){
-    const row=document.createElement('button');row.type='button';row.className='candidate-row';row.setAttribute('role','option');row.setAttribute('aria-selected',String(selected&&String(c.sqcand)===String(selected.sqcand)));
-    row.innerHTML=`<span class="candidate-number">${esc(c.n||'—')}</span><span><strong>${esc(c.nmu||c.nm||'Candidatura')}</strong><small>${esc(c.party||c.partyName||'')}</small></span><span class="candidate-arrow">›</span>`;
-    row.addEventListener('click',()=>{selected=c;renderAll();row.scrollIntoView({block:'nearest'})});host.appendChild(row);
+    const row=document.createElement('div');
+    row.className='candidate-row';
+    row.dataset.sqcand=String(c.sqcand||'');
+    row.setAttribute('role','option');
+    row.setAttribute('aria-selected',String(selected&&String(c.sqcand)===String(selected.sqcand)));
+
+    const open=document.createElement('button');
+    open.type='button';
+    open.className='candidate-open';
+    open.innerHTML=`<span class="candidate-number">${esc(c.n||'—')}</span><span class="candidate-copy"><strong>${esc(c.nmu||c.nm||'Candidatura')}</strong><small>${esc(c.party||c.partyName||'')}</small></span><span class="candidate-arrow">›</span>`;
+    open.addEventListener('click',()=>{selected=c;renderAll();row.scrollIntoView({block:'nearest'})});
+
+    row.appendChild(open);
+    host.appendChild(row);
   }
   $('candidateCount').textContent=`${fi.format(candidates.length)} candidaturas`;
   $('candidateHint').textContent=filtered.length>shown.length?`Exibindo ${shown.length} de ${fi.format(filtered.length)} correspondências. Refine a busca.`:filtered.length?`${fi.format(filtered.length)} correspondência${filtered.length===1?'':'s'}.`:'Nenhuma candidatura encontrada.';
