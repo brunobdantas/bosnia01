@@ -35,7 +35,7 @@ jobs:
           ok=0
           for i in $(seq 1 36); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-historyfix-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-statusfix-1"'; then
               ok=1
               break
             fi
@@ -71,5 +71,10 @@ jobs:
 
             grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/dom
             grep -q 'class="notice live"' /tmp/dom
+            if [[ "$url" != *"cargo=presidente"* ]]; then
+              grep -q 'class="status-badge ' /tmp/dom
+              grep -q 'id="statusFilter"' /tmp/dom
+              grep -q 'value="elected"' /tmp/dom
+            fi
           done
           echo "Smoke test dos cinco cargos aprovado."

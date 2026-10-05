@@ -6,12 +6,12 @@ function parseRoute(){
   if(CFG.ufs.includes(uf)){scope=uf;preferredUF=uf;localStorage.setItem('tse26-preferred-uf',uf)}
   else scope=office().scope==='federal'?'BR':preferredUF;
   if(office().scope==='state'&&scope==='BR')scope=preferredUF;
-  showAll=false;loadCompared();
+  showAll=false;statusFilter='all';loadCompared();
 }
 function resetForNavigation(){
   clearTimeout(timer);clearTimeout(summaryTimer);
-  data=null;candidates=[];selected=null;busy=false;failures=0;nextAt=0;lastDistinctKey='';lastSuccessAt=0;showAll=false;
-  $('candidateSearch').value='';$('partyFilter').value='';$('electedOnly').checked=false;$('candidateList').innerHTML='';
+  data=null;candidates=[];selected=null;busy=false;failures=0;nextAt=0;lastDistinctKey='';lastSuccessAt=0;showAll=false;statusFilter='all';
+  $('candidateSearch').value='';$('partyFilter').value='';$('statusFilter').value='all';$('candidateList').innerHTML='';$('statusLegend').innerHTML='';$('statusLegend').hidden=true;
   $('candidateCount').textContent='—';$('progressPct').textContent='—';$('progressBar').style.width='0';$('sectionsText').textContent='— seções';
   $('historyChart').innerHTML='<text class="chart-empty" x="500" y="140" text-anchor="middle">Aguardando dados oficiais.</text>';
   $('historyPoints').textContent='0 cargas';$('comparisonPanel').hidden=true;$('compareBadge').textContent='0';
@@ -88,7 +88,7 @@ $('stateSearch').addEventListener('input',e=>renderStates(e.target.value));
 $('brOption').addEventListener('click',()=>{closeStateModal();navigateRace('president','BR',true)});
 $('candidateSearch').addEventListener('input',renderCandidates);
 $('partyFilter').addEventListener('change',renderCandidates);
-$('electedOnly').addEventListener('change',renderCandidates);
+$('statusFilter').addEventListener('change',e=>{statusFilter=e.target.value||'all';showAll=true;renderCandidates()});
 $('showAllButton').addEventListener('click',()=>{showAll=!showAll;renderCandidates()});
 $('clearCompare').addEventListener('click',()=>{comparedIds=[];saveCompared();renderCandidates();renderComparison()});
 $('jumpCompare').addEventListener('click',()=>{if(!$('comparisonPanel').hidden)$('comparisonPanel').scrollIntoView({behavior:'smooth',block:'start'});else notice('waiting','Selecione candidaturas pelo botão “Comparar” na lista principal.')});

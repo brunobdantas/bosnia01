@@ -26,7 +26,7 @@ let scope='BR';
 let preferredUF=localStorage.getItem('tse26-preferred-uf')||'DF';
 let data=null,candidates=[],selected=null;
 let busy=false,failures=0,nextAt=0,timer=null,countdownTimer=null,summaryTimer=null,lastSuccessAt=0,lastDistinctKey='';
-let showAll=false,comparedIds=[];
+let showAll=false,comparedIds=[],statusFilter='all';
 
 const num=(v,d=0)=>{
   if(v===null||v===undefined||v==='')return d;
@@ -110,11 +110,21 @@ function genericRange(m){
   const den=m.validVotes+m.remaining;
   return{min:den?100*m.candidateVotes/den:0,max:den?100*(m.candidateVotes+m.remaining)/den:0};
 }
-function officialStatus(c){
-  if(String(c?.e||'').toLowerCase()!=='s')return '';
-  const st=String(c?.st||'').trim();
-  return /[A-Za-zÀ-ÿ]/.test(st)&&st.length>2?st:'Situação oficial TSE';
+function statusMeta(c){
+  const raw=String(c?.st||'').trim();
+  const normalized=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/º/g,'o');
+  if(raw){
+    if(normalized.includes('nao eleito'))return{key:'not-elected',label:raw,icon:'—'};
+    if(normalized.includes('suplente'))return{key:'alternate',label:raw,icon:'S'};
+    if(normalized.includes('2o turno')||normalized.includes('2 turno'))return{key:'runoff',label:raw,icon:'2º'};
+    if(normalized.startsWith('eleito'))return{key:'elected',label:raw,icon:'✓'};
+    return{key:'defined',label:raw,icon:'•'};
+  }
+  if(String(c?.e||'').toLowerCase()==='s')return{key:'defined',label:'Situação definida',icon:'•'};
+  return null;
 }
+function officialStatus(c){return statusMeta(c)?.label||''}
+
 function initials(c){
   const name=String(c?.nmu||c?.nm||'?').trim();
   return name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();

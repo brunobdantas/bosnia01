@@ -25,23 +25,40 @@ function renderHeaders(){
 }
 function renderFilters(){
   const prop=!!office().proportional;
-  $('filters').hidden=!prop;
-  if(!prop)return;
-  const parties=[...new Set(candidates.map(c=>c.party).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
-  const current=$('partyFilter').value;
-  $('partyFilter').innerHTML='<option value="">Todos os partidos</option>'+parties.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
-  if(parties.includes(current))$('partyFilter').value=current;
+  $('searchField').hidden=!prop;
+  $('partyField').hidden=!prop;
+
+  if(prop){
+    const parties=[...new Set(candidates.map(c=>c.party).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const current=$('partyFilter').value;
+    $('partyFilter').innerHTML='<option value="">Todos os partidos</option>'+parties.map(p=>`<option value="${esc(p)}">${esc(p)}</option>`).join('');
+    if(parties.includes(current))$('partyFilter').value=current;
+  }
+
+  const order=[
+    ['elected','Eleitos'],
+    ['runoff','2º turno'],
+    ['alternate','Suplentes'],
+    ['not-elected','Não eleitos'],
+    ['defined','Situação definida']
+  ];
+  const present=new Set(candidates.map(statusMeta).filter(Boolean).map(s=>s.key));
+  const select=$('statusFilter');
+  select.innerHTML='<option value="all">Todas as situações</option>'+order.filter(([key])=>present.has(key)).map(([key,label])=>`<option value="${key}">${label}</option>`).join('');
+  if(statusFilter!=='all'&&!present.has(statusFilter))statusFilter='all';
+  select.value=statusFilter;
+  $('statusField').hidden=present.size===0;
+  $('filters').hidden=!prop&&present.size===0;
 }
 function candidateVisibleList(){
   const q=$('candidateSearch').value.trim().toLocaleLowerCase('pt-BR');
   const party=$('partyFilter').value;
-  const elected=$('electedOnly').checked;
   return [...candidates]
     .sort((a,b)=>num(a.n)-num(b.n)||String(a.nmu||a.nm||'').localeCompare(String(b.nmu||b.nm||''),'pt-BR'))
     .filter(c=>{
       if(q&&!`${c.n||''} ${c.nmu||c.nm||''} ${c.party||''}`.toLocaleLowerCase('pt-BR').includes(q))return false;
       if(party&&c.party!==party)return false;
-      if(elected&&String(c.e||'').toLowerCase()!=='s')return false;
+      if(statusFilter!=='all'&&statusMeta(c)?.key!==statusFilter)return false;
       return true;
     });
 }
@@ -61,13 +78,13 @@ function renderCandidates(){
   host.innerHTML='';
   for(const c of shown){
     const m=metrics(data,c),row=document.createElement('div');
-    row.className='candidate-row';row.tabIndex=0;row.setAttribute('role','button');
-    row.setAttribute('aria-label',`Abrir ${c.nmu||c.nm||'candidatura'}`);
-    if(selected&&String(selected.sqcand)===String(c.sqcand))row.style.background='#fafbfb';
+    const sm=statusMeta(c);
+    row.className='candidate-row'+(sm?` status-${sm.key}`:'');row.tabIndex=0;row.setAttribute('role','button');
+    row.setAttribute('aria-label',`Abrir ${c.nmu||c.nm||'candidatura'}${sm?`, ${sm.label}`:''}`);
+    if(selected&&String(selected.sqcand)===String(c.sqcand))row.classList.add('selected');
     row.appendChild(photoElement(c));
     const info=document.createElement('div');info.className='candidate-info';
-    const status=officialStatus(c);
-    info.innerHTML=`<div class="candidate-info-top"><strong>${esc(c.nmu||c.nm||'Candidatura')}</strong>${status?`<span class="status-badge">${esc(status)}</span>`:''}</div><small>${esc(c.party||c.partyName||'')} ${c.n?`• nº ${esc(c.n)}`:''}</small>`;
+    info.innerHTML=`<div class="candidate-info-top"><strong>${esc(c.nmu||c.nm||'Candidatura')}</strong>${sm?`<span class="status-badge ${sm.key}"><b>${esc(sm.icon)}</b> ${esc(sm.label)}</span>`:''}</div><small>${esc(c.party||c.partyName||'')} ${c.n?`• nº ${esc(c.n)}`:''}</small>`;
     const result=document.createElement('div');result.className='candidate-result';result.innerHTML=`<strong>${fp.format(m.candidateShare)}%</strong><span>${fi.format(m.candidateVotes)} votos</span>`;
     const compare=document.createElement('button');compare.type='button';compare.className='compare-btn'+(comparedIds.includes(String(c.sqcand))?' active':'');compare.textContent=comparedIds.includes(String(c.sqcand))?'✓ Comparando':'Comparar';
     compare.addEventListener('click',e=>{e.stopPropagation();toggleCompare(c)});
@@ -75,10 +92,34 @@ function renderCandidates(){
     row.addEventListener('click',select);row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();select()}});
     row.append(info,result,compare);host.appendChild(row);
   }
+  renderStatusLegend();
   $('candidateCount').textContent=`${fi.format(list.length)} candidatura${list.length===1?'':'s'}`;
   $('showAllButton').hidden=list.length<=collapsedLimit;
   if(list.length>collapsedLimit)$('showAllButton').textContent=showAll?'Mostrar menos':'Todos os candidatos';
   $('candidateSectionTitle').textContent=selected?`Candidaturas • analisando ${selected.nmu||selected.nm||''}`:'Candidaturas';
+}
+function renderStatusLegend(){
+  const host=$('statusLegend');
+  const order=[
+    ['elected','Eleito'],
+    ['runoff','2º turno'],
+    ['alternate','Suplente'],
+    ['not-elected','Não eleito'],
+    ['defined','Situação definida']
+  ];
+  const counts=new Map();
+  for(const c of candidates){const s=statusMeta(c);if(s)counts.set(s.key,(counts.get(s.key)||0)+1)}
+  const items=order.filter(([key])=>counts.has(key));
+  host.hidden=items.length===0;
+  host.innerHTML='';
+  for(const [key,label] of items){
+    const b=document.createElement('button');
+    b.type='button';
+    b.className=`status-chip ${key}${statusFilter===key?' active':''}`;
+    b.innerHTML=`<span>${esc(label)}</span><b>${fi.format(counts.get(key))}</b>`;
+    b.addEventListener('click',()=>{statusFilter=statusFilter===key?'all':key;$('statusFilter').value=statusFilter;renderCandidates()});
+    host.appendChild(b);
+  }
 }
 function renderVoteSummary(m){
   const total=m.totalVotes;
