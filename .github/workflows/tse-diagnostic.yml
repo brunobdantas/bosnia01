@@ -43,23 +43,33 @@ jobs:
           done
           test "$ok" = "1"
 
-      - name: Executar portal em Chrome real
+      - name: Executar cinco cargos em Chrome real
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}" > /tmp/dom 2> /tmp/chrome.log || true
+          urls=(
+            "https://brunobdantas.github.io/bosnia01/?cargo=presidente&uf=BR&smoke=${GITHUB_SHA}"
+            "https://brunobdantas.github.io/bosnia01/?cargo=governador&uf=DF&smoke=${GITHUB_SHA}"
+            "https://brunobdantas.github.io/bosnia01/?cargo=senado&uf=DF&smoke=${GITHUB_SHA}"
+            "https://brunobdantas.github.io/bosnia01/?cargo=camara&uf=DF&smoke=${GITHUB_SHA}"
+            "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=DF&smoke=${GITHUB_SHA}"
+          )
+          for url in "${urls[@]}"; do
+            echo "==== $url"
+            rm -f /tmp/dom /tmp/chrome.log
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "$url" > /tmp/dom 2> /tmp/chrome.log || true
 
-          if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log; then
-            echo "Erro JavaScript detectado"
-            exit 1
-          fi
+            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log; then
+              echo "Erro JavaScript detectado"
+              exit 1
+            fi
 
-          rows="$(grep -c 'class="candidate-row' /tmp/dom || true)"
-          echo "candidate_rows=$rows"
-          test "$rows" -ge 1
+            rows="$(grep -o 'class="candidate-row' /tmp/dom | wc -l | tr -d ' ')"
+            echo "candidate_rows=$rows"
+            test "$rows" -ge 1
 
-          grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/dom
-          grep -q 'class="notice live"' /tmp/dom
-
-          echo "Smoke test aprovado."
+            grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/dom
+            grep -q 'class="notice live"' /tmp/dom
+          done
+          echo "Smoke test dos cinco cargos aprovado."
