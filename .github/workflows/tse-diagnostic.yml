@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=8000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}" > /tmp/home 2> /tmp/home.log || true
+          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=8000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?noai=1&smoke=${GITHUB_SHA}" > /tmp/home 2> /tmp/home.log || true
           ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/home.log
           grep -q 'id="askInput"' /tmp/home
           grep -q 'id="askSuggestions"' /tmp/home
