@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="build" content="20261005-askai-3">
-<meta name="description" content="Eleição 360: pergunte em linguagem natural sobre os resultados das Eleições 2026. IA para interpretar a pergunta; números calculados com dados oficiais do TSE.">
+<meta name="build" content="20261005-localai-1">
+<meta name="description" content="Eleição 360: pergunte em linguagem natural sobre os resultados das Eleições 2026. IA local no navegador; números calculados com dados oficiais do TSE.">
 <title>Eleição 360 • Pergunte aos dados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
-<link rel="preconnect" href="https://js.puter.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://huggingface.co" crossorigin>
 <link rel="stylesheet" href="uol.css?v=20261005-historyscope-1">
-<link rel="stylesheet" href="ask.css?v=20261005-askai-3">
+<link rel="stylesheet" href="ask.css?v=20261005-localai-1">
 </head>
 <body>
 <header class="site-header">
@@ -52,7 +53,7 @@
     <header class="ask-topbar">
       <div class="ask-mobile-brand"><span class="ask-logo">26</span><strong>Eleição 360</strong></div>
       <div class="ask-source"><i></i><span id="askSourceStatus">Dados oficiais do TSE</span></div>
-      <button id="askAiButton" class="ask-ai-button" type="button" disabled><i></i><span>Carregando IA…</span></button>
+      <button id="askAiButton" class="ask-ai-button" type="button"><i></i><span>Preparar IA local</span></button>
       <button id="askTopExplorer" type="button">Explorer</button>
     </header>
 
@@ -60,7 +61,7 @@
       <section class="ask-welcome" id="askWelcome">
         <div class="ask-mark">26</div>
         <h1>O que você quer saber<br>sobre as Eleições 2026?</h1>
-        <p>Pergunte em linguagem natural. A IA entende a intenção; votos, cadeiras e situações são calculados exclusivamente a partir dos dados oficiais do TSE.</p>
+        <p>Pergunte em linguagem natural. A IA roda neste aparelho para entender a intenção; votos, cadeiras e situações são calculados exclusivamente a partir dos dados oficiais do TSE.</p>
 
         <div class="ask-suggestions" id="askSuggestions">
           <button type="button">Quem foi eleito deputado estadual em MG?</button>
@@ -76,7 +77,7 @@
         <textarea id="askInput" rows="1" maxlength="500" placeholder="Pergunte qualquer coisa sobre os resultados…" aria-label="Pergunte aos dados das Eleições 2026"></textarea>
         <button id="askSend" type="submit" aria-label="Enviar pergunta">↑</button>
       </form>
-      <p>IA para entender a pergunta; TSE como fonte dos fatos. Sem previsão de resultado ou ranking político.</p>
+      <p>IA local no seu aparelho; TSE como fonte dos fatos. Sem cadastro, API key, previsão de resultado ou ranking político.</p>
     </div>
   </section>
 </main>
@@ -275,10 +276,10 @@
 <script src="uol-ui-1.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-ui-2.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-ui-3.js?v=20261005-historyscope-1" defer></script>
-<script src="ask-core.js?v=20261005-askai-3" defer></script>
-<script src="ask-answers.js?v=20261005-askai-3" defer></script>
-<script src="ask-ai.js?v=20261005-askai-3" defer></script>
-<script src="ask-runtime.js?v=20261005-askai-3" defer></script>
+<script src="ask-core.js?v=20261005-localai-1" defer></script>
+<script src="ask-answers.js?v=20261005-localai-1" defer></script>
+<script src="ask-ai.js?v=20261005-localai-1" defer></script>
+<script src="ask-runtime.js?v=20261005-localai-1" defer></script>
 <script src="uol-runtime.js?v=20261005-historyscope-1" defer></script>
 </body>
 </html>

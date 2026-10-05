@@ -8,6 +8,8 @@
   A.state.context=A.state.context||{intent:null,office:null,ufs:[],turns:[]};
   A.state.aiReady=false;
   A.state.aiLoadState='idle';
+  A.state.aiProgress=0;
+  A.state.aiDevice='';
 
   A.localPlan=q=>({
     q,
@@ -39,76 +41,57 @@
     if(p.i==='auto')return true;
     if(A.isFollowup(q))return true;
     if(!p.k&&['elected','seats'].includes(p.i)&&A.state.context?.office)return true;
-    if(/\b(quem sao esses|quais desses|por partido|so os nomes|so eleitos|agora compare|e quanto|e os outros)\b/.test(n))return true;
+    if(/\b(quem sao esses|quais desses|por partido|so os nomes|so eleitos|agora compare|e quanto|e os outros|explique|me mostre|quero entender)\b/.test(n))return true;
     return false;
   };
 
-  A.isAISignedIn=()=>{
-    try{return !!window.puter?.auth?.isSignedIn?.()}catch{return false}
-  };
+  A.localAIDevice=()=>navigator.gpu?'webgpu':'wasm';
 
   A.refreshAIStatus=()=>{
     const btn=A.E('askAiButton'),node=A.E('askSourceStatus');
-    const available=!!window.puter?.ai?.chat;
-    const signed=available&&A.isAISignedIn();
+    const st=A.state.aiLoadState;
 
-    if(signed){
-      document.documentElement.dataset.aiProvider='puter-active';
-      if(node)node.textContent='IA ativa • dados oficiais do TSE';
-      if(btn){btn.disabled=false;btn.classList.add('active');btn.querySelector('span').textContent='IA ativa'}
+    if(st==='ready'){
+      document.documentElement.dataset.aiProvider='local-ready';
+      if(node)node.textContent=`IA local ativa • ${A.state.aiDevice==='webgpu'?'WebGPU':'CPU'} • TSE`;
+      if(btn){
+        btn.disabled=false;
+        btn.classList.add('active');
+        btn.querySelector('span').textContent='IA local ativa';
+      }
       return;
     }
 
-    if(available){
-      document.documentElement.dataset.aiProvider='puter-ready';
-      if(node)node.textContent='IA opcional • dados oficiais do TSE';
-      if(btn){btn.disabled=false;btn.classList.remove('active');btn.querySelector('span').textContent='Ativar IA grátis'}
+    if(st==='loading'){
+      document.documentElement.dataset.aiProvider='local-loading';
+      const p=Math.round(A.state.aiProgress||0);
+      if(node)node.textContent=p>0?`Preparando IA local • ${p}%`:'Preparando IA local…';
+      if(btn){
+        btn.disabled=true;
+        btn.classList.remove('active');
+        btn.querySelector('span').textContent=p>0?`IA local ${p}%`:'Carregando IA local…';
+      }
       return;
     }
 
-    document.documentElement.dataset.aiProvider='fallback';
-    if(node)node.textContent='Modo local • dados oficiais do TSE';
+    if(st==='failed'){
+      document.documentElement.dataset.aiProvider='local-failed';
+      if(node)node.textContent='Modo local determinístico • dados TSE';
+      if(btn){
+        btn.disabled=false;
+        btn.classList.remove('active');
+        btn.querySelector('span').textContent='Tentar IA local';
+      }
+      return;
+    }
+
+    document.documentElement.dataset.aiProvider='local-idle';
+    if(node)node.textContent='Dados oficiais do TSE';
     if(btn){
+      btn.disabled=false;
       btn.classList.remove('active');
-      btn.disabled=A.state.aiLoadState==='loading';
-      btn.querySelector('span').textContent=A.state.aiLoadState==='loading'?'Carregando IA…':'Tentar carregar IA';
+      btn.querySelector('span').textContent='Preparar IA local';
     }
-  };
-
-  A.loadAIProvider=()=>{
-    if(window.puter?.ai?.chat){
-      A.state.aiReady=true;
-      A.state.aiLoadState='ready';
-      A.refreshAIStatus();
-      return Promise.resolve(true);
-    }
-    if(A._aiLoader)return A._aiLoader;
-
-    A.state.aiLoadState='loading';
-    A.refreshAIStatus();
-
-    A._aiLoader=new Promise(resolve=>{
-      let done=false;
-      const finish=ok=>{
-        if(done)return;
-        done=true;
-        A.state.aiReady=!!ok;
-        A.state.aiLoadState=ok?'ready':'failed';
-        if(!ok)A._aiLoader=null;
-        A.refreshAIStatus();
-        resolve(!!ok);
-      };
-      const script=document.createElement('script');
-      script.src='https://js.puter.com/v2/';
-      script.async=true;
-      script.dataset.e360Ai='puter';
-      script.onload=()=>finish(!!window.puter?.ai?.chat);
-      script.onerror=()=>finish(false);
-      document.head.appendChild(script);
-      setTimeout(()=>finish(!!window.puter?.ai?.chat),7000);
-    });
-
-    return A._aiLoader;
   };
 
   A.toast=msg=>{
@@ -117,49 +100,124 @@
     t.textContent=msg;
     t.hidden=false;
     clearTimeout(A.toast._t);
-    A.toast._t=setTimeout(()=>t.hidden=true,3000);
+    A.toast._t=setTimeout(()=>t.hidden=true,3200);
+  };
+
+  A.ensureAIWorker=()=>{
+    if(A._aiWorker)return A._aiWorker;
+    const w=new Worker('ask-local-worker.js?v=20261005-localai-1',{type:'module'});
+    A._aiWorker=w;
+    A._aiPending=new Map();
+
+    w.onmessage=e=>{
+      const m=e.data||{};
+      if(m.type==='progress'){
+        const p=Number(m.progress);
+        if(Number.isFinite(p))A.state.aiProgress=Math.max(A.state.aiProgress||0,p);
+        A.refreshAIStatus();
+        return;
+      }
+      if(m.type==='status'){
+        A.state.aiLoadState='loading';
+        A.refreshAIStatus();
+        return;
+      }
+      if(m.type==='ready'){
+        A.state.aiReady=true;
+        A.state.aiLoadState='ready';
+        A.state.aiProgress=100;
+        A.state.aiDevice=m.device||A.localAIDevice();
+        A.refreshAIStatus();
+        A._aiInitResolve?.(true);
+        A._aiInitResolve=null;
+        A._aiInitReject=null;
+        return;
+      }
+      if(m.type==='result'){
+        const p=A._aiPending.get(m.id);
+        if(p){
+          A._aiPending.delete(m.id);
+          p.resolve(String(m.text||''));
+        }
+        return;
+      }
+      if(m.type==='error'){
+        if(m.id){
+          const p=A._aiPending.get(m.id);
+          if(p){
+            A._aiPending.delete(m.id);
+            p.reject(new Error(m.message||'local_ai_error'));
+          }
+        }else{
+          A.state.aiReady=false;
+          A.state.aiLoadState='failed';
+          A.refreshAIStatus();
+          A._aiInitReject?.(new Error(m.message||'local_ai_error'));
+          A._aiInitResolve=null;
+          A._aiInitReject=null;
+        }
+      }
+    };
+
+    w.onerror=error=>{
+      console.info('[Eleição 360] IA local indisponível.',error?.message||error);
+      A.state.aiReady=false;
+      A.state.aiLoadState='failed';
+      A.refreshAIStatus();
+      A._aiInitReject?.(new Error(error?.message||'worker_error'));
+      A._aiInitResolve=null;
+      A._aiInitReject=null;
+    };
+
+    return w;
+  };
+
+  A.loadAIProvider=()=>{
+    if(A.state.aiReady)return Promise.resolve(true);
+    if(A._aiLoader)return A._aiLoader;
+
+    A.state.aiLoadState='loading';
+    A.state.aiProgress=0;
+    A.refreshAIStatus();
+
+    A._aiLoader=new Promise((resolve,reject)=>{
+      A._aiInitResolve=resolve;
+      A._aiInitReject=reject;
+      try{
+        A.ensureAIWorker().postMessage({type:'init',device:A.localAIDevice()});
+      }catch(error){
+        reject(error);
+      }
+    }).then(()=>{
+      A.state.aiReady=true;
+      A.state.aiLoadState='ready';
+      A.refreshAIStatus();
+      return true;
+    }).catch(error=>{
+      console.info('[Eleição 360] Falha ao carregar IA local; mantendo parser determinístico.',error?.message||error);
+      A.state.aiReady=false;
+      A.state.aiLoadState='failed';
+      A._aiLoader=null;
+      A.refreshAIStatus();
+      return false;
+    });
+
+    return A._aiLoader;
   };
 
   A.activateAI=async()=>{
-    if(!window.puter?.auth?.signIn){
-      const loaded=await A.loadAIProvider();
-      if(!loaded||!window.puter?.auth?.signIn){
-        A.toast('A IA externa não carregou neste navegador. O modo local continua funcionando.');
-        A.refreshAIStatus();
-        return false;
-      }
-    }
-
-    if(A.isAISignedIn()){
-      A.refreshAIStatus();
-      A.toast('IA já está ativa.');
+    if(A.state.aiReady){
+      A.toast('IA local já está ativa neste aparelho.');
       return true;
     }
-
-    const btn=A.E('askAiButton');
-    if(btn){btn.disabled=true;btn.querySelector('span').textContent='Ativando IA…'}
-
-    try{
-      await window.puter.auth.signIn({attempt_temp_user_creation:true});
-      const ok=A.isAISignedIn();
-      A.refreshAIStatus();
-      if(ok)A.toast('IA ativada. Agora você pode fazer perguntas mais livres.');
-      return ok;
-    }catch(error){
-      console.info('[Eleição 360] Ativação da IA cancelada ou bloqueada.',error?.error||error?.message||error);
-      A.refreshAIStatus();
-      A.toast(error?.error==='popup_blocked'
-        ? 'O navegador bloqueou a janela de ativação. Libere pop-ups e tente novamente.'
-        : 'A IA não foi ativada. O modo local continua funcionando.');
-      return false;
-    }
+    A.toast('Preparando IA local. Na primeira vez o navegador baixa o modelo e o guarda em cache.');
+    const ok=await A.loadAIProvider();
+    if(ok)A.toast('IA local pronta. Nenhum cadastro ou chave é necessário.');
+    else A.toast('A IA local não pôde iniciar neste navegador. O modo determinístico continua funcionando.');
+    return ok;
   };
 
-  A.aiContent=response=>{
-    let content=response?.message?.content??response?.content??response;
-    if(Array.isArray(content))content=content.map(x=>typeof x==='string'?x:(x?.text||'')).join('');
-    return String(content||'').trim();
-  };
+  A.aiContent=text=>String(text||'').trim();
 
   A.normalizePlan=(raw,local)=>{
     const ctx=A.state.context||{};
@@ -172,25 +230,48 @@
     return{q:local.q,n:local.n,i,k,us:[...new Set(mergedUfs)].slice(0,4)};
   };
 
-  A.interpretAI=async(q,local)=>{
-    if(!window.puter?.ai?.chat)throw new Error('puter_unavailable');
-    if(!A.isAISignedIn())throw new Error('puter_not_signed_in');
+  A.localAIInfer=async(messages)=>{
+    const ok=A.state.aiReady||await A.loadAIProvider();
+    if(!ok)throw new Error('local_ai_unavailable');
 
+    const id='q'+Date.now()+'-'+Math.random().toString(36).slice(2);
+    const worker=A.ensureAIWorker();
+    const promise=new Promise((resolve,reject)=>{
+      A._aiPending.set(id,{resolve,reject});
+      setTimeout(()=>{
+        const p=A._aiPending.get(id);
+        if(p){
+          A._aiPending.delete(id);
+          reject(new Error('local_ai_timeout'));
+        }
+      },30000);
+    });
+
+    worker.postMessage({type:'infer',id,messages,device:A.localAIDevice()});
+    return promise;
+  };
+
+  A.interpretAI=async(q,local)=>{
     const ctx=A.state.context||{};
     const system=[
       'Você interpreta perguntas sobre resultados das Eleições 2026 no Brasil.',
       'NÃO responda a pergunta. NÃO produza números, votos, percentuais, nomes de eleitos ou previsões.',
       'Sua única tarefa é transformar a frase em um plano estruturado.',
       'Retorne SOMENTE um objeto JSON válido, sem markdown, com exatamente estas chaves:',
-      '{"intent":"elected|seats|votes|progress|compare|summary|unfinished","office":"president|governor|senator|federalDeputy|stateDeputy|null","ufs":["UF"]}',
+      '{"intent":"candidateVotes|elected|seats|votes|progress|compare|summary|unfinished","office":"president|governor|senator|federalDeputy|stateDeputy|null","ufs":["UF"]}',
       'UF deve ser sigla oficial brasileira em maiúsculas; use BR apenas para Presidência nacional.',
       'Use o contexto anterior apenas quando o usuário fizer continuação, por exemplo "e no DF?", "agora Senado", "e por partido?".',
-      'Para pedidos "por partido", "composição", "bancada", use intent seats.',
-      'Para eleitos ou quem ganhou, use elected.',
-      'Para brancos, nulos, válidos ou comparecimento, use votes; se comparar UFs, use compare.',
-      'Para seções, andamento, quanto falta ou totalização, use progress.',
-      'Para panorama/resumo de uma UF, use summary.',
-      'Para UFs que ainda não terminaram, use unfinished.',
+      'Pergunta sobre votos de uma pessoa/candidato = candidateVotes.',
+      'Composição, bancada, cadeiras, vagas ou por partido = seats.',
+      'Eleitos ou quem ganhou = elected.',
+      'Brancos, nulos, válidos ou comparecimento = votes; se comparar UFs, compare.',
+      'Seções, andamento, quanto falta ou totalização = progress.',
+      'Panorama/resumo de uma UF = summary.',
+      'UFs que ainda não terminaram = unfinished.',
+      'Exemplos: "e no DF?" após uma pergunta sobre Câmara mantém o cargo e troca ufs para ["DF"].',
+      'Exemplo: "agora por partido" após Câmara = {"intent":"seats","office":"federalDeputy","ufs":ufs_do_contexto}.',
+      'Exemplo: "quem entrou em Minas?" com contexto de deputado federal = elected + federalDeputy + MG.',
+      'Exemplo: "quantos votos o Zema teve?" = candidateVotes; office pode ser null se o cargo não estiver explícito.',
       'Nunca inferir preferência política, nunca prever vencedor e nunca classificar candidatos.'
     ].join(' ');
 
@@ -199,14 +280,9 @@
       {role:'user',content:`Contexto anterior: ${JSON.stringify({intent:ctx.intent||null,office:ctx.office||null,ufs:ctx.ufs||[],lastUF:A.state.lastUF})}\nPergunta atual: ${q}`}
     ];
 
-    const response=await Promise.race([
-      window.puter.ai.chat(messages,{model:'gpt-5-nano',normalize:true}),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('puter_timeout')),10000))
-    ]);
-
-    const text=A.aiContent(response);
+    const text=A.aiContent(await A.localAIInfer(messages));
     const match=text.match(/\{[\s\S]*\}/);
-    if(!match)throw new Error('puter_invalid_json');
+    if(!match)throw new Error('local_ai_invalid_json');
     return A.normalizePlan(JSON.parse(match[0]),local);
   };
 
@@ -241,11 +317,6 @@
     return false;
   };
 
-  A.aiActivationCard=(r,q)=>{
-    const safe=A.esc(q);
-    A.reply(r,`<div class="ask-ai-gate"><strong>Essa pergunta se beneficia da IA.</strong><p>Ative a IA grátis para eu interpretar linguagem mais livre. Os resultados continuarão vindo somente do TSE.</p><button type="button" data-ai-activate data-ai-q="${safe}">Ativar IA grátis e responder</button></div>`);
-  };
-
   A.smartRoute=async(q,r,{forceAI=false}={})=>{
     const local=A.localPlan(q);
     const enriched=A.enrichWithContext(local,q);
@@ -253,46 +324,37 @@
     let usedAI=false;
     const wantsAI=forceAI||A.needsAI(q,local);
 
-    if(wantsAI&&A.isAISignedIn()){
-      try{
-        plan=await A.interpretAI(q,enriched);
-        usedAI=true;
-      }catch(error){
-        console.info('[Eleição 360] IA falhou; usando interpretador local.',error?.message||error);
-        plan=enriched;
+    if(wantsAI){
+      const ok=A.state.aiReady||await A.loadAIProvider();
+      if(ok){
+        try{
+          plan=await A.interpretAI(q,enriched);
+          usedAI=true;
+        }catch(error){
+          console.info('[Eleição 360] IA local não interpretou; usando parser determinístico.',error?.message||error);
+          plan=enriched;
+        }
       }
-    }else if(wantsAI&&!A.isAISignedIn()&&!A.canExecuteLocally(enriched)){
-      A.aiActivationCard(r,q);
-      document.documentElement.dataset.aiLast='needs-auth';
-      return 'needs-auth';
+    }
+
+    if(!usedAI&&!A.canExecuteLocally(plan)&&wantsAI){
+      return A.fail(r);
     }
 
     await A.executePlan(plan,r);
     A.rememberPlan(plan,q,usedAI);
 
     if(usedAI){
-      r.insertAdjacentHTML('beforeend','<div class="ask-ai-note">IA interpretou a pergunta • números e situações calculados somente com dados do TSE</div>');
+      r.insertAdjacentHTML('beforeend','<div class="ask-ai-note">IA local interpretou a pergunta • números e situações calculados somente com dados do TSE</div>');
       A.bind?.(r);
-      A.E('askSourceStatus').textContent='IA ativa • dados oficiais do TSE';
-      document.documentElement.dataset.aiLast='puter';
+      A.E('askSourceStatus').textContent='IA local ativa • dados oficiais do TSE';
+      document.documentElement.dataset.aiLast='local-model';
       return 'ai';
     }
 
     A.refreshAIStatus();
-    document.documentElement.dataset.aiLast='local';
+    document.documentElement.dataset.aiLast='deterministic';
     return 'local';
-  };
-
-  A.retryWithAI=async(q,r)=>{
-    const ok=await A.activateAI();
-    if(!ok)return;
-    r.innerHTML='<div class="ask-thinking"><i></i><i></i><i></i></div>';
-    try{
-      await A.smartRoute(q,r,{forceAI:true});
-    }catch(error){
-      console.error(error);
-      A.reply(r,'<p>Não consegui usar a IA agora. O modo local continua disponível.</p>');
-    }
   };
 
   A.resetAIContext=()=>{A.state.context={intent:null,office:null,ufs:[],turns:[]}};

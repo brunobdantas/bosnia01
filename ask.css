@@ -19,8 +19,8 @@ body.explorer-open>.site-header,body.explorer-open>.race-nav-wrap,body.explorer-
 @media(prefers-reduced-motion:reduce){.ask-thinking i{animation:none}}
 
 .ask-ai-note{margin-top:12px;padding:8px 10px;border:1px solid #d9ebe6;border-radius:9px;background:#f2faf7;color:#35675b;font-size:.57rem;line-height:1.4}
-html[data-ai-provider="puter"] .ask-source i{background:#22a06b;box-shadow:0 0 0 3px #e8f6ef}
-html[data-ai-provider="fallback"] .ask-source i{background:#9ca3af;box-shadow:0 0 0 3px #f1f3f5}
+html[data-ai-provider="local-ready"] .ask-source i{background:#22a06b;box-shadow:0 0 0 3px #e8f6ef}
+html[data-ai-provider="local-failed"] .ask-source i{background:#9ca3af;box-shadow:0 0 0 3px #f1f3f5}
 
 .ask-ai-button{display:flex;align-items:center;gap:7px;min-height:36px;padding:0 11px;border:1px solid #dfe3e7;border-radius:9px;background:#fff;color:#3f454d;font-size:.64rem;font-weight:800;cursor:pointer}
 .ask-ai-button i{width:7px;height:7px;border-radius:50%;background:#9ca3af}
@@ -35,3 +35,8 @@ html[data-ai-provider="fallback"] .ask-source i{background:#9ca3af;box-shadow:0 
 .ask-toast{position:fixed;left:50%;bottom:92px;z-index:200;transform:translateX(-50%);max-width:min(520px,calc(100% - 24px));padding:10px 14px;border-radius:999px;background:#202123;color:#fff;font-size:.65rem;font-weight:700;box-shadow:0 10px 30px rgba(17,24,39,.2)}
 .ask-toast[hidden]{display:none}
 @media(max-width:680px){.ask-ai-button{padding:0 9px}.ask-ai-button span{max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
+
+html[data-ai-provider="local-loading"] .ask-source i{background:#d6a534;box-shadow:0 0 0 3px #fff5d8}
+html[data-ai-provider="local-idle"] .ask-source i{background:#9ca3af;box-shadow:0 0 0 3px #f1f3f5}
+.ask-ai-button:not(.active) i{background:#9ca3af}
+html[data-ai-provider="local-loading"] .ask-ai-button i{background:#d6a534}

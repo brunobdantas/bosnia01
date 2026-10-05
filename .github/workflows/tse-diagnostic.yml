@@ -18,11 +18,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files=(uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js ask-core.js ask-answers.js ask-ai.js ask-runtime.js)
+          files=(uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js ask-core.js ask-answers.js ask-ai.js ask-runtime.js ask-local-worker.js)
           for f in "${files[@]}"; do
             curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/$f" -o "/tmp/$f"
           done
-          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/ask-core.js /tmp/ask-answers.js /tmp/ask-ai.js /tmp/ask-runtime.js > /tmp/all.js
+          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/ask-core.js /tmp/ask-answers.js /tmp/ask-ai.js /tmp/ask-runtime.js /tmp/ask-local-worker.js > /tmp/all.js
           node -e "new Function(require('fs').readFileSync('/tmp/all.js','utf8')); console.log('syntax-ok')"
 
       - name: Aguardar GitHub Pages
@@ -33,7 +33,7 @@ jobs:
           for i in $(seq 1 40); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
             if curl -fsSL --max-time 20 "$url" -o /tmp/pages-index; then
-              if grep -q 'content="20261005-askai-3"' /tmp/pages-index; then
+              if grep -q 'content="20261005-localai-1"' /tmp/pages-index; then
                 ok=1
                 break
               fi
@@ -53,37 +53,48 @@ jobs:
           grep -q 'id="askSuggestions"' /tmp/home
           grep -q 'Pergunte aos dados' /tmp/home
           grep -q 'O que você quer saber' /tmp/home
-          ! grep -q '<script src="https://js.puter.com/v2/"' /tmp/pages-index
-          grep -q 'ask-ai.js?v=20261005-askai-3' /tmp/home
+          ! grep -qi 'puter.com' /tmp/pages-index
+          grep -q 'ask-ai.js?v=20261005-localai-1' /tmp/home
           grep -q 'id="askAiButton"' /tmp/home
+          grep -q 'Preparar IA local' /tmp/home
 
-      - name: Validar camada de IA sem segredo
+      - name: Validar IA local sem cadastro
         shell: bash
         run: |
           set -euo pipefail
           curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/ask-ai.js" -o /tmp/ask-ai.js
-          grep -q "puter.ai.chat" /tmp/ask-ai.js
-          grep -q "NÃO produza números" /tmp/ask-ai.js
+          curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/ask-local-worker.js" -o /tmp/ask-local-worker.js
+          grep -q "new Worker('ask-local-worker.js" /tmp/ask-ai.js
+          grep -q "SmolLM2-135M-Instruct-ONNX" /tmp/ask-local-worker.js
+          grep -q "@huggingface/transformers@4.3.0" /tmp/ask-local-worker.js
+          grep -q "q4f16" /tmp/ask-local-worker.js
           grep -q "A.smartRoute" /tmp/ask-ai.js
           grep -q "A.enrichWithContext" /tmp/ask-ai.js
-          grep -q "A.loadAIProvider" /tmp/ask-ai.js
-          grep -q "A.activateAI" /tmp/ask-ai.js
-          grep -q "https://js.puter.com/v2/" /tmp/ask-ai.js
-          ! grep -Eq "sk_[A-Za-z0-9_-]{12,}" /tmp/ask-ai.js
+          ! grep -Eqi "puter|api[_-]?key[[:space:]]*[:=]|sk_[A-Za-z0-9_-]{12,}" /tmp/ask-ai.js /tmp/ask-local-worker.js
 
-      - name: Validar chat sem provedor externo de IA
+      - name: Validar dependências públicas da IA local
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 30 "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0" -o /tmp/transformers.js
+          test -s /tmp/transformers.js
+          curl -fsSL --max-time 30 "https://huggingface.co/onnx-community/SmolLM2-135M-Instruct-ONNX/resolve/main/config.json" -o /tmp/model-config.json
+          node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/model-config.json','utf8')); if(!j.model_type) process.exit(1)"
+          curl -fsSIL --max-time 30 "https://huggingface.co/onnx-community/SmolLM2-135M-Instruct-ONNX/resolve/main/onnx/model_q4f16.onnx" > /tmp/model-head
+          grep -Eqi "HTTP/.* (200|302)" /tmp/model-head
+
+      - name: Validar chat sem carregar o LLM
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           "$chrome" --headless=new --no-sandbox --disable-gpu \
-            --host-resolver-rules="MAP js.puter.com 127.0.0.1" \
             --virtual-time-budget=9000 --enable-logging=stderr --v=0 --dump-dom \
-            "https://brunobdantas.github.io/bosnia01/?smoke=no-ai-${GITHUB_SHA}" > /tmp/noai 2> /tmp/noai.log || true
+            "https://brunobdantas.github.io/bosnia01/?noai=1&smoke=no-ai-${GITHUB_SHA}" > /tmp/noai 2> /tmp/noai.log || true
           ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/noai.log
           grep -q 'id="askInput"' /tmp/noai
           grep -q 'id="askSuggestions"' /tmp/noai
-          grep -q 'Modo local' /tmp/noai
+          grep -q 'Dados oficiais do TSE' /tmp/noai
 
       - name: Testar pergunta por nome sem IA externa
         shell: bash
@@ -94,9 +105,8 @@ jobs:
           q='Quantos%20votos%20o%20Zema%20teve%3F'
           for i in $(seq 1 4); do
             "$chrome" --headless=new --no-sandbox --disable-gpu \
-              --host-resolver-rules="MAP js.puter.com 127.0.0.1" \
               --virtual-time-budget=14000 --enable-logging=stderr --v=0 --dump-dom \
-              "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=zema-${GITHUB_SHA}-$i" > /tmp/zema 2> /tmp/zema.log || true
+              "https://brunobdantas.github.io/bosnia01/?noai=1&q=$q&smoke=zema-${GITHUB_SHA}-$i" > /tmp/zema 2> /tmp/zema.log || true
             if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/zema.log; then exit 1; fi
             if grep -qi 'ZEMA' /tmp/zema \
               && grep -q 'Votos nominais' /tmp/zema \
@@ -123,7 +133,7 @@ jobs:
           ok=0
           q='Quem%20foi%20eleito%20deputado%20distrital%20no%20DF%3F'
           for i in $(seq 1 5); do
-            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/elected 2> /tmp/elected.log || true
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?noai=1&q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/elected 2> /tmp/elected.log || true
             if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/elected.log; then exit 1; fi
             if grep -q 'Deputado Distrital' /tmp/elected               && grep -q 'class="ask-candidate-card"' /tmp/elected               && grep -q 'Fonte: TSE' /tmp/elected; then ok=1; break; fi
             sleep 4
@@ -144,7 +154,7 @@ jobs:
           ok=0
           q='Como%20ficou%20a%20composicao%20da%20Camara%20no%20DF%3F'
           for i in $(seq 1 5); do
-            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/seats 2> /tmp/seats.log || true
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?noai=1&q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/seats 2> /tmp/seats.log || true
             if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/seats.log; then exit 1; fi
             if grep -q 'class="ask-seat-bar"' /tmp/seats               && grep -q 'class="ask-party-list"' /tmp/seats               && grep -q 'Fonte: TSE' /tmp/seats; then ok=1; break; fi
             sleep 4
@@ -159,7 +169,7 @@ jobs:
           ok=0
           q='Compare%20brancos%20e%20nulos%20entre%20DF%20e%20GO'
           for i in $(seq 1 5); do
-            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/compare 2> /tmp/compare.log || true
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?noai=1&q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/compare 2> /tmp/compare.log || true
             if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/compare.log; then exit 1; fi
             if grep -q 'class="ask-table-wrap"' /tmp/compare               && grep -q '>DF<' /tmp/compare               && grep -q '>GO<' /tmp/compare; then ok=1; break; fi
             sleep 4
