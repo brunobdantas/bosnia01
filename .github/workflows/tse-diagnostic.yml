@@ -1,4 +1,4 @@
-name: Smoke test da apuração
+name: Smoke test Eleição 360
 
 on:
   push:
@@ -6,49 +6,55 @@ on:
       - "index.html"
       - "uol-*.js"
       - "uol.css"
+      - "experience.js"
+      - "experience.css"
       - ".github/workflows/tse-diagnostic.yml"
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Validar vag da parcial de MG
+      - name: Validar fontes oficiais essenciais
         shell: bash
         run: |
           set -euo pipefail
-          u="https://resultados.tse.jus.br/oficial/ele2026/6259/dados/mg/mg-c0007-e006259-u.json"
-          ok=0
-          for i in $(seq 1 6); do
-            if curl -fsS -H "Accept: application/json" --max-time 30 "$u" -o /tmp/mg.json; then
-              if node -e "JSON.parse(require('fs').readFileSync('/tmp/mg.json','utf8'))" >/dev/null 2>&1; then
+          urls=(
+            "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0003-e006259-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0005-e006259-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0006-e006259-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0008-e006259-u.json"
+          )
+          for u in "${urls[@]}"; do
+            ok=0
+            for i in $(seq 1 5); do
+              if curl -fsS -H "Accept: application/json" --max-time 30 "$u" -o /tmp/e.json                 && node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/e.json','utf8'));if(!j.carg)process.exit(2)" >/dev/null 2>&1; then
                 ok=1
                 break
               fi
-            fi
-            sleep 5
+              sleep 4
+            done
+            test "$ok" = "1"
           done
-          test "$ok" = "1"
 
-          node - <<'NODE'
-          const fs=require('fs');
-          const j=JSON.parse(fs.readFileSync('/tmp/mg.json','utf8'));
-          let seats=0, groups=0;
-          for(const cargo of j.carg||[])for(const agr of cargo.agr||[]){
-            const v=Number(String(agr.vag??0).replace(',','.'))||0;
-            if(v>0){groups++;seats+=v}
-          }
-          console.log(JSON.stringify({idg:j.idg,sections:j.s?.pstn,tf:j.tf,groupsWithSeats:groups,seats}));
-          if(seats<1)throw new Error('TSE não informou vagas parciais em agr.vag para MG');
-          NODE
+      - name: Validar sintaxe dos módulos
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js experience.js; do
+            curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/$f" -o "/tmp/$f"
+          done
+          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/experience.js > /tmp/all.js
+          node -e "new Function(require('fs').readFileSync('/tmp/all.js','utf8')); console.log('syntax-ok')"
 
       - name: Aguardar versão publicada
         shell: bash
         run: |
           set -euo pipefail
           ok=0
-          for i in $(seq 1 36); do
+          for i in $(seq 1 40); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-historyscope-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-election360-1"'; then
               ok=1
               break
             fi
@@ -56,35 +62,25 @@ jobs:
           done
           test "$ok" = "1"
 
-      - name: Validar renderer dos gráficos
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/uol-ui-2.js" -o /tmp/ui2.js
-          grep -q "timeKind='totalized'" /tmp/ui2.js
-          grep -q "stableSummarySvg" /tmp/ui2.js
-          grep -q "Sem variação material nas cargas observadas" /tmp/ui2.js
-          grep -q "generatedTs" /tmp/ui2.js
-
-      - name: Validar eleito se terminasse agora em MG
+      - name: Executar home em Chrome real
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           ok=0
           for i in $(seq 1 5); do
-            rm -f /tmp/mg /tmp/mg.log
-            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=12000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=MG&smoke=${GITHUB_SHA}-$i" > /tmp/mg 2> /tmp/mg.log || true
+            rm -f /tmp/dom /tmp/chrome.log
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=18000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i" > /tmp/dom 2> /tmp/chrome.log || true
 
-            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/mg.log; then
+            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log; then
               exit 1
             fi
 
-            if grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/mg               && ! grep -q 'id="statusFilter" disabled' /tmp/mg               && grep -q 'value="current-elected"' /tmp/mg               && grep -q 'Eleito se terminasse agora' /tmp/mg               && grep -q 'status-chip current-elected' /tmp/mg               && grep -q 'class="definition-banner partial"' /tmp/mg; then
+            if grep -q 'id="experienceApp"' /tmp/dom               && grep -q 'Eleição 360' /tmp/dom               && grep -q 'id="expHeroProgress"' /tmp/dom               && ! grep -q 'id="expHeroProgress">—' /tmp/dom               && grep -q 'id="expStateCards"' /tmp/dom               && grep -q 'class="e360-race-card"' /tmp/dom               && grep -q 'class="e360-seat-dot"' /tmp/dom               && grep -q 'id="expPassportGrid"' /tmp/dom               && grep -q 'id="expShareButton"' /tmp/dom; then
               ok=1
               break
             fi
             sleep 5
           done
           test "$ok" = "1"
-          echo "Smoke da parcial proporcional de MG aprovado."
+          echo "Smoke Eleição 360 aprovado."
