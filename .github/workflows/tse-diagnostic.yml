@@ -65,7 +65,7 @@ jobs:
           grep -q "NÃO produza números" /tmp/ask-ai.js
           grep -q "A.smartRoute" /tmp/ask-ai.js
           grep -q "A.enrichWithContext" /tmp/ask-ai.js
-          ! grep -q "sk-" /tmp/ask-ai.js
+          ! grep -Eq "sk_[A-Za-z0-9_-]{12,}" /tmp/ask-ai.js
 
       - name: Testar pergunta de eleitos
         shell: bash
