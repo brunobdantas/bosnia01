@@ -9,7 +9,7 @@ jobs:
   diagnose:
     runs-on: ubuntu-latest
     steps:
-      - name: Testar endpoints oficiais
+      - name: Testar endpoints oficiais e CORS
         shell: bash
         run: |
           set -euo pipefail
@@ -21,8 +21,8 @@ jobs:
           )
           for u in "${urls[@]}"; do
             echo "==== $u"
-            curl -sS -D /tmp/headers -o /tmp/body --max-time 20 "$u" || true
-            head -n 20 /tmp/headers || true
+            curl -sS -H "Origin: https://brunobdantas.github.io" -D /tmp/headers -o /tmp/body --max-time 20 "$u" || true
+            cat /tmp/headers || true
             echo "bytes=$(wc -c < /tmp/body 2>/dev/null || echo 0)"
             node - <<'NODE' || true
           const fs=require('fs');
@@ -40,5 +40,5 @@ jobs:
         shell: bash
         run: |
           curl -sS -L --max-time 20 -D /tmp/pageh -o /tmp/page https://brunobdantas.github.io/bosnia01/
-          head -n 10 /tmp/pageh
+          head -n 20 /tmp/pageh
           grep -E "uol-core.js|uol-runtime.js|Apuração 2026" /tmp/page | head -n 20
