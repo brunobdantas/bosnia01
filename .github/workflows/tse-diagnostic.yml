@@ -1,0 +1,44 @@
+name: Diagnóstico TSE
+
+on:
+  push:
+    paths:
+      - ".github/workflows/tse-diagnostic.yml"
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Testar endpoints oficiais
+        shell: bash
+        run: |
+          set -euo pipefail
+          urls=(
+            "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/df/df-c0001-e006257-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0003-e006259-u.json"
+            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0005-e006259-u.json"
+          )
+          for u in "${urls[@]}"; do
+            echo "==== $u"
+            curl -sS -D /tmp/headers -o /tmp/body --max-time 20 "$u" || true
+            head -n 20 /tmp/headers || true
+            echo "bytes=$(wc -c < /tmp/body 2>/dev/null || echo 0)"
+            node - <<'NODE' || true
+          const fs=require('fs');
+          const s=fs.readFileSync('/tmp/body','utf8');
+          try{
+            const j=JSON.parse(s);
+            let count=0;
+            for(const cargo of j.carg||[])for(const agr of cargo.agr||[])for(const par of agr.par||[])count+=(par.cand||[]).length;
+            console.log(JSON.stringify({dg:j.dg,hg:j.hg,idg:j.idg,sections:j.s,valid:j.v?.vv,candidates:count}));
+          }catch(e){console.log('JSON_ERROR',e.message,s.slice(0,180))}
+          NODE
+          done
+
+      - name: Conferir página publicada
+        shell: bash
+        run: |
+          curl -sS -L --max-time 20 -D /tmp/pageh -o /tmp/page https://brunobdantas.github.io/bosnia01/
+          head -n 10 /tmp/pageh
+          grep -E "uol-core.js|uol-runtime.js|Apuração 2026" /tmp/page | head -n 20
