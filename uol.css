@@ -43,3 +43,17 @@
 @media(max-width:680px){
   .comparison-chart svg,.history-panel svg{margin-top:8px}
 }
+
+.chart-stable-title{fill:#1e2328;font-size:25px;font-weight:850}
+.chart-stable-sub{fill:#6c727b;font-size:16px}
+.chart-stable-name{fill:#20252a;font-size:16px;font-weight:800}
+.chart-stable-range{fill:#6c727b;font-size:14px}
+.chart-stable-delta{fill:#394047;font-size:15px;font-weight:800}
+.chart-stable-note{fill:#858b92;font-size:12px}
+@media(max-width:680px){
+  .chart-stable-title{font-size:23px}
+  .chart-stable-sub{font-size:15px}
+  .chart-stable-name{font-size:15px}
+  .chart-stable-range{font-size:13px}
+  .chart-stable-delta{font-size:14px}
+}

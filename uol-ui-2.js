@@ -29,12 +29,51 @@ function renderComparison(){
   });
   renderComparisonChart(list);
 }
+function historyStats(h){
+  const valid=(h||[]).filter(x=>Number.isFinite(num(x.share,NaN))).sort((a,b)=>num(a.sourceTs,a.ts)-num(b.sourceTs,b.ts));
+  if(!valid.length)return null;
+  const first=valid[0],last=valid.at(-1),shares=valid.map(x=>num(x.share));
+  const range=Math.max(...shares)-Math.min(...shares);
+  const delta=num(last.share)-num(first.share);
+  const start=num(first.sourceTs,first.ts),end=num(last.sourceTs,last.ts);
+  return{first,last,range,delta,start,end,count:valid.length};
+}
+function compactTime(ms){
+  if(!Number.isFinite(ms))return '—';
+  const d=new Date(ms),dd=String(d.getUTCDate()).padStart(2,'0'),mo=String(d.getUTCMonth()+1).padStart(2,'0'),hh=String(d.getUTCHours()).padStart(2,'0'),mm=String(d.getUTCMinutes()).padStart(2,'0'),ss=String(d.getUTCSeconds()).padStart(2,'0');
+  return `${dd}/${mo} ${hh}:${mm}:${ss}`;
+}
+function stableSummarySvg(svg,items,H){
+  const W=1000;
+  let out=`<text x="500" y="72" text-anchor="middle" class="chart-stable-title">Sem variação material nas cargas observadas</text>`;
+  out+=`<text x="500" y="104" text-anchor="middle" class="chart-stable-sub">O histórico deste navegador começou já no fim da apuração.</text>`;
+  const baseY=150,row=34;
+  items.forEach((item,i)=>{
+    const y=baseY+i*row;
+    out+=`<circle cx="110" cy="${y-5}" r="6" fill="${item.color||'#128c7e'}"/>`;
+    out+=`<text x="128" y="${y}" class="chart-stable-name">${esc(item.name)}</text>`;
+    out+=`<text x="500" y="${y}" text-anchor="middle" class="chart-stable-range">${compactTime(item.stats.start)} → ${compactTime(item.stats.end)}</text>`;
+    out+=`<text x="900" y="${y}" text-anchor="end" class="chart-stable-delta">Δ ${signed(item.stats.delta,fpp)} p.p.</text>`;
+  });
+  const maxY=baseY+Math.max(1,items.length)*row+18;
+  out+=`<text x="500" y="${Math.min(H-18,maxY)}" text-anchor="middle" class="chart-stable-note">O TSE não disponibiliza, em 2026, um arquivo histórico completo das parciais para retroceder até o início.</text>`;
+  svg.innerHTML=out;
+}
+function hasMaterialVariation(h,threshold=.005){
+  const st=historyStats(h);
+  return !!st&&st.range>=threshold;
+}
+
 function renderComparisonChart(list){
   const wrap=$('comparisonChartWrap'),svg=$('comparisonChart'),legend=$('comparisonLegend');
   if(list.length<2){wrap.hidden=true;return}wrap.hidden=false;
   const series=list.map((c,i)=>({c,color:PALETTE[i],h:historyFor(c).slice(-90)})).filter(s=>s.h.length);
   legend.innerHTML=series.map(s=>`<span><i style="background:${s.color}"></i>${esc(s.c.nmu||s.c.nm||'')}</span>`).join('');
   const ptsAll=series.flatMap(s=>s.h);if(ptsAll.length<2){svg.innerHTML='<text class="chart-empty" x="500" y="150" text-anchor="middle">A comparação histórica aparece após duas cargas distintas.</text>';return}
+  if(series.every(s=>!hasMaterialVariation(s.h))){
+    stableSummarySvg(svg,series.map(s=>({name:s.c.nmu||s.c.nm||'Candidatura',color:s.color,stats:historyStats(s.h)})),300);
+    return;
+  }
   renderMultiChart(svg,series,300);
 }
 function renderHistory(){
@@ -42,6 +81,10 @@ function renderHistory(){
   $('historyTitle').textContent=selected?(selected.nmu||selected.nm||'Candidatura'):'Candidatura selecionada';
   $('historyPoints').textContent=`${h.length} carga${h.length===1?'':'s'}`;
   if(h.length<2){svg.innerHTML='<text class="chart-empty" x="500" y="140" text-anchor="middle">O gráfico aparece após duas cargas oficiais distintas.</text>';return}
+  if(!hasMaterialVariation(h)){
+    stableSummarySvg(svg,[{name:selected?.nmu||selected?.nm||'Candidatura',color:'#128c7e',stats:historyStats(h)}],280);
+    return;
+  }
   renderMultiChart(svg,[{c:selected,color:'#128c7e',h}],280);
 }
 function renderMultiChart(svg,series,H){
