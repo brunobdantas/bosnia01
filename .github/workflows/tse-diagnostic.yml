@@ -48,13 +48,22 @@ jobs:
           ok=0
           for i in $(seq 1 36); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-currentelected-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-chartfix-1"'; then
               ok=1
               break
             fi
             sleep 5
           done
           test "$ok" = "1"
+
+      - name: Validar renderer dos gráficos
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/uol-ui-2.js" -o /tmp/ui2.js
+          grep -q "const xticks=\[" /tmp/ui2.js
+          grep -q "sameProgress" /tmp/ui2.js
+          ! grep -q "Math.max(.01,xmax-xmin)" /tmp/ui2.js
 
       - name: Validar eleito se terminasse agora em MG
         shell: bash

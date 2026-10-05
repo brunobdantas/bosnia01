@@ -37,3 +37,9 @@
 .definition-banner.partial .definition-copy>p{color:#526b7d}
 .definition-chip.current-elected{background:#e3eef9;color:#245f91}
 .status-pending code,.method-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+
+.chart-axis-x{font-size:14px;font-weight:700}
+.chart-axis-title{font-size:11px;letter-spacing:.04em}
+@media(max-width:680px){
+  .comparison-chart svg,.history-panel svg{margin-top:8px}
+}
