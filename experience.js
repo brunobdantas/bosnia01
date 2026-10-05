@@ -1,70 +1,57 @@
 'use strict';
 
 (()=>{
-  const EXP_VERSION='20261005-election360-1';
-  const STORAGE={
-    uf:'e360-uf',
-    visited:'e360-visited-ufs',
-    offices:'e360-visited-offices',
-    last:'e360-last-summary'
-  };
+  const VERSION='20261005-clean-1';
   const state={
-    uf:localStorage.getItem(STORAGE.uf)||'DF',
+    uf:localStorage.getItem('e360-uf')||'DF',
     national:null,
     races:{},
-    loading:false,
-    previous:null
+    loading:false
   };
-  const officeSpecs=[
+  const specs=[
     ['governor','Governador'],
     ['senator','Senado'],
     ['federalDeputy','Câmara'],
     ['stateDeputy','Assembleia']
   ];
-  const palette=['#0f766e','#2563eb','#7c3aed','#c2410c','#b42318','#047857','#334155','#a16207','#0369a1','#be185d','#4d7c0f','#6d28d9'];
+  const colors=['#0f766e','#2563eb','#7c3aed','#c2410c','#0369a1','#a16207','#be185d','#4d7c0f','#334155','#6d28d9','#047857','#b42318'];
   const el=id=>document.getElementById(id);
   const fmt=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
-  const pctFmt=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const safe=(s)=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const pfmt=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const safe=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
   function setExplorer(open){
     document.body.classList.toggle('explorer-open',!!open);
     if(open){
-      requestAnimationFrame(()=>{
-        const nav=document.querySelector('.race-nav-wrap');
-        if(nav)nav.scrollIntoView({behavior:'smooth',block:'start'});
-      });
+      requestAnimationFrame(()=>document.querySelector('.race-nav-wrap')?.scrollIntoView({behavior:'smooth',block:'start'}));
     }else{
       requestAnimationFrame(()=>el('experienceApp')?.scrollIntoView({behavior:'smooth',block:'start'}));
     }
   }
 
-  function currentOfficeCode(key,uf){
-    if(key==='stateDeputy')return uf==='DF'?'0008':'0007';
-    return OFFICES[key]?.code||'';
+  function officeCode(key,uf){
+    return key==='stateDeputy'?(uf==='DF'?'0008':'0007'):OFFICES[key].code;
   }
 
-  function expUrl(key,uf){
-    const o=OFFICES[key],code=currentOfficeCode(key,uf),e=String(o.election).padStart(6,'0');
+  function urlFor(key,uf){
+    const o=OFFICES[key],code=officeCode(key,uf),e=String(o.election).padStart(6,'0');
     const s=(key==='president'?'br':uf.toLowerCase());
     return `${CFG.base}/${o.election}/dados/${s}/${s}-c${code}-e${e}-u.json`;
   }
 
   async function loadJson(key,uf){
-    const url=expUrl(key,uf);
-    const cacheKey=`e360-cache-${key}-${uf}`;
+    const cacheKey=`e360-clean-${key}-${uf}`;
     try{
-      const r=await fetch(url,{cache:'no-cache',headers:{Accept:'application/json'}});
+      const r=await fetch(urlFor(key,uf),{cache:'no-cache',headers:{Accept:'application/json'}});
       if(!r.ok)throw new Error(`HTTP ${r.status}`);
       const j=await r.json();
       try{localStorage.setItem(cacheKey,JSON.stringify(j))}catch{}
-      return {j,stale:false};
-    }catch(error){
+      return j;
+    }catch(e){
       try{
         const c=localStorage.getItem(cacheKey);
-        if(c)return {j:JSON.parse(c),stale:true,error};
-      }catch{}
-      return {j:null,stale:true,error};
+        return c?JSON.parse(c):null;
+      }catch{return null}
     }
   }
 
@@ -72,63 +59,69 @@
     const out=[];
     for(const cargo of j?.carg||[]){
       (cargo?.agr||[]).forEach((agr,ai)=>{
-        const agrKey=`agr-${ai}|${agr?.nm||''}`;
+        const group=`g${ai}|${agr?.nm||''}`;
         const seats=Math.max(0,num(agr?.vag));
         for(const par of agr?.par||[])for(const c of par?.cand||[]){
-          out.push({...c,party:par?.sg||'',partyName:par?.nm||'',group:agr?.nm||'',agrKey,agrSeats:seats,destination:c?.dvt||par?.dvt||''});
+          out.push({...c,party:par?.sg||'',group,seats,destination:c?.dvt||par?.dvt||''});
         }
       });
     }
     return out;
   }
 
-  function isValid(c){
+  function valid(c){
     const d=String(c?.destination||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
     return !d||d.startsWith('valido');
   }
 
-  function statusOf(c,key,j){
+  function status(c,key,j){
     const raw=String(c?.st||'').trim();
     const n=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/º/g,'o');
     if(raw){
-      if(n.includes('nao eleito'))return {key:'not-elected',label:raw};
-      if(n.includes('suplente'))return {key:'alternate',label:raw};
-      if(n.includes('2o turno')||n.includes('2 turno'))return {key:'runoff',label:raw};
-      if(n.startsWith('eleito'))return {key:'elected',label:raw};
-      return {key:'defined',label:raw};
+      if(n.includes('nao eleito'))return 'not-elected';
+      if(n.includes('suplente'))return 'alternate';
+      if(n.includes('2o turno')||n.includes('2 turno'))return 'runoff';
+      if(n.startsWith('eleito'))return 'elected';
+      return 'defined';
     }
     if(String(c?.e||'').toLowerCase()==='s'){
       if(OFFICES[key]?.majority){
         const md=String(j?.md||'').toLowerCase();
-        if(md==='e')return {key:'elected',label:'Eleito • definição matemática TSE'};
-        if(md==='s')return {key:'runoff',label:'2º turno • definição matemática TSE'};
-      }else return {key:'elected',label:'Eleito • TSE'};
+        if(md==='e')return 'elected';
+        if(md==='s')return 'runoff';
+      }else return 'elected';
     }
-    return null;
+    return '';
   }
 
-  function provisionalSet(j,key){
-    if(!OFFICES[key]?.proportional||String(j?.tf||'').toLowerCase()==='s')return new Set();
+  function provisional(j,key){
+    if(!OFFICES[key]?.proportional||String(j?.tf||'').toLowerCase()==='s')return [];
     const groups=new Map();
     for(const c of flat(j)){
-      if(!isValid(c))continue;
-      if(!groups.has(c.agrKey))groups.set(c.agrKey,{seats:c.agrSeats,items:[]});
-      groups.get(c.agrKey).items.push(c);
+      if(!valid(c))continue;
+      if(!groups.has(c.group))groups.set(c.group,{seats:c.seats,items:[]});
+      groups.get(c.group).items.push(c);
     }
-    const ids=new Set();
+    const out=[];
     for(const g of groups.values()){
       if(!g.seats)continue;
       g.items.sort((a,b)=>num(b.vap)-num(a.vap)||num(a.n)-num(b.n));
-      for(const c of g.items.slice(0,g.seats))ids.add(String(c.sqcand));
+      out.push(...g.items.slice(0,g.seats));
     }
-    return ids;
+    return out;
   }
 
-  function electedFor(j,key){
-    const cs=flat(j),official=cs.filter(c=>statusOf(c,key,j)?.key==='elected');
+  function elected(j,key){
+    const official=flat(j).filter(c=>status(c,key,j)==='elected');
     if(official.length)return {items:official,provisional:false};
-    const ids=provisionalSet(j,key);
-    return {items:cs.filter(c=>ids.has(String(c.sqcand))),provisional:ids.size>0};
+    const current=provisional(j,key);
+    return {items:current,provisional:current.length>0};
+  }
+
+  function partyColor(p){
+    let h=0;
+    for(const ch of String(p||''))h=((h<<5)-h)+ch.charCodeAt(0);
+    return colors[Math.abs(h)%colors.length];
   }
 
   function raceMetrics(j){
@@ -137,285 +130,174 @@
     return {...m,stamp:[j?.dt,j?.ht].filter(Boolean).join(' ')||[j?.dg,j?.hg].filter(Boolean).join(' ')||'—'};
   }
 
-  function partyColor(p){
-    let h=0;
-    for(const ch of String(p||''))h=((h<<5)-h)+ch.charCodeAt(0);
-    return palette[Math.abs(h)%palette.length];
+  function openRace(key,uf){
+    navigateRace(key,uf);
+    setExplorer(true);
   }
 
-  function markVisited(uf){
-    let list=[];
-    try{list=JSON.parse(localStorage.getItem(STORAGE.visited)||'[]')}catch{}
-    if(!list.includes(uf))list.push(uf);
-    localStorage.setItem(STORAGE.visited,JSON.stringify(list));
+  function presidentStatus(j){
+    if(!j)return 'Resultado nacional';
+    const md=String(j?.md||'').toLowerCase();
+    const tf=String(j?.tf||'').toLowerCase()==='s';
+    if(tf)return 'Situação oficial publicada';
+    if(md==='e')return 'Resultado matematicamente definido';
+    if(md==='s')return '2º turno matematicamente definido';
+    return 'Apuração nacional';
   }
 
-  function markOffice(key){
-    let list=[];
-    try{list=JSON.parse(localStorage.getItem(STORAGE.offices)||'[]')}catch{}
-    if(!list.includes(key))list.push(key);
-    localStorage.setItem(STORAGE.offices,JSON.stringify(list));
-  }
-
-  function renderHero(){
-    const j=state.national?.j;
-    if(!j)return;
-    const m=raceMetrics(j),cs=flat(j).sort((a,b)=>num(a.n)-num(b.n));
-    el('expHeroProgress').textContent=`${pctFmt.format(m.sections)}%`;
+  function renderNational(){
+    const j=state.national,m=raceMetrics(j);
+    if(!j||!m)return;
+    el('expHeroProgress').textContent=`${pfmt.format(m.sections)}%`;
     el('expHeroProgressBar').style.width=`${m.sections}%`;
     el('expHeroStamp').textContent=`Carga oficial • ${m.stamp}`;
     el('expStatValid').textContent=fmt.format(m.validVotes);
     el('expStatBlank').textContent=fmt.format(m.blankVotes);
     el('expStatNull').textContent=fmt.format(m.nullVotes);
-    el('expStatSections').textContent=m.totalSections?`${fmt.format(m.doneSections)} / ${fmt.format(m.totalSections)}`:'—';
-
-    const host=el('expNationalCandidates');
-    host.innerHTML='';
-    for(const c of cs){
-      const share=candidateShare(c,j),st=statusOf(c,'president',j);
-      const card=document.createElement('button');
-      card.type='button';
-      card.className='e360-candidate-mini';
-      card.innerHTML=`<span class="e360-num">${safe(c.n||'—')}</span><span><strong>${safe(c.nmu||c.nm||'Candidatura')}</strong><small>${safe(c.party||'')} • ${pctFmt.format(share)}%</small></span>${st?`<em class="e360-status ${st.key}">${safe(st.label)}</em>`:''}`;
-      card.addEventListener('click',()=>{markOffice('president');navigateRace('president','BR');setExplorer(true)});
-      host.appendChild(card);
-    }
-  }
-
-  function renderReturnCard(){
-    const box=el('expReturnCard');
-    const j=state.national?.j;
-    if(!j){box.hidden=true;return}
-    const m=raceMetrics(j);
-    let prev=null;
-    try{prev=JSON.parse(localStorage.getItem(STORAGE.last)||'null')}catch{}
-    const current={idg:j.idg||'',sections:m.sections,stamp:m.stamp};
-    if(prev&&prev.idg&&prev.idg!==current.idg){
-      const delta=m.sections-num(prev.sections);
-      box.hidden=false;
-      box.innerHTML=`<span>DESDE SUA ÚLTIMA VISITA</span><strong>Nova carga oficial detectada</strong><p>A totalização nacional mudou ${Math.abs(delta)>=.00001?`em ${delta>0?'+':''}${new Intl.NumberFormat('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:5}).format(delta)} p.p.`:'sem alteração material no percentual de seções'}.</p>`;
-    }else{
-      box.hidden=false;
-      box.innerHTML=`<span>AGORA</span><strong>Você está na carga mais recente observada</strong><p>${m.stamp} • ${pctFmt.format(m.sections)}% das seções.</p>`;
-    }
-    localStorage.setItem(STORAGE.last,JSON.stringify(current));
-  }
-
-  function raceCard(key,label,j){
-    const m=raceMetrics(j),e=electedFor(j,key);
-    const defined=flat(j).filter(c=>statusOf(c,key,j)).length;
-    const provisional=e.provisional;
-    return `<button class="e360-race-card" data-race="${key}">
-      <span class="e360-race-kicker">${safe(label)}</span>
-      <strong>${m?pctFmt.format(m.sections)+'%':'—'}</strong>
-      <small>${m?fmt.format(m.doneSections)+' seções totalizadas':'dados indisponíveis'}</small>
-      <div class="e360-race-foot"><span>${e.items.length?fmt.format(e.items.length)+(provisional?' cadeiras na parcial':' eleitos'):(defined?fmt.format(defined)+' situações definidas':'aguardando definição')}</span><i>›</i></div>
-    </button>`;
+    el('expPresidentStatus').textContent=presidentStatus(j);
+    el('expPresidentMeta').textContent=`${pfmt.format(m.sections)}% das seções • ${m.stamp}`;
   }
 
   function renderState(){
     el('expStateName').textContent=`${state.uf} • ${UF[state.uf]}`;
+    el('expSeatsTitle').textContent=`Composição em ${state.uf}`;
     el('expStateSelect').value=state.uf;
+
     const host=el('expStateCards');
-    host.innerHTML=officeSpecs.map(([key,label])=>raceCard(key,label,state.races[key]?.j)).join('');
-    host.querySelectorAll('[data-race]').forEach(b=>b.addEventListener('click',()=>{
-      const key=b.dataset.race;
-      markOffice(key);
-      navigateRace(key,state.uf);
-      setExplorer(true);
-    }));
+    host.innerHTML='';
+    for(const [key,label] of specs){
+      const j=state.races[key],m=raceMetrics(j);
+      const e=j?elected(j,key):{items:[],provisional:false};
+      const defined=j?flat(j).filter(c=>status(c,key,j)).length:0;
+      const row=document.createElement('button');
+      row.type='button';
+      row.className='e360-race-row';
+      const summary=e.items.length
+        ? `${fmt.format(e.items.length)} ${e.provisional?'cadeiras na parcial':'eleito'+(e.items.length===1?'':'s')}`
+        : defined?`${fmt.format(defined)} situações definidas`:'aguardando definição';
+      row.innerHTML=`<span><strong>${safe(key==='stateDeputy'&&state.uf==='DF'?'CLDF':label)}</strong><small>${safe(summary)}</small></span><span class="e360-race-progress"><b>${m?pfmt.format(m.sections)+'%':'—'}</b><i>›</i></span>`;
+      row.addEventListener('click',()=>openRace(key,state.uf));
+      host.appendChild(row);
+    }
   }
 
-  function seatSummary(j,key){
+  function seatData(j,key){
     if(!j)return null;
-    const elected=electedFor(j,key);
-    const items=elected.items;
-    const byParty=new Map();
-    for(const c of items){
+    const e=elected(j,key);
+    const by=new Map();
+    for(const c of e.items){
       const p=c.party||'Sem sigla';
-      if(!byParty.has(p))byParty.set(p,[]);
-      byParty.get(p).push(c);
+      by.set(p,(by.get(p)||0)+1);
     }
-    return {items,provisional:elected.provisional,byParty};
+    return {total:e.items.length,provisional:e.provisional,by};
   }
 
-  function renderSeatDots(hostId,legendId,j,key,label){
-    const host=el(hostId),legend=el(legendId),summary=seatSummary(j,key);
-    if(!summary){host.innerHTML='<p class="e360-empty">Dados ainda indisponíveis.</p>';legend.innerHTML='';return}
-    const items=[...summary.items].sort((a,b)=>String(a.party||'').localeCompare(String(b.party||''),'pt-BR')||num(a.n)-num(b.n));
-    host.innerHTML=`<div class="e360-seat-head"><div><span>${label}</span><strong>${fmt.format(items.length)} cadeiras</strong></div><em>${summary.provisional?'se terminasse agora':'situação oficial'}</em></div><div class="e360-seat-dots"></div>`;
-    const dots=host.querySelector('.e360-seat-dots');
-    for(const c of items){
-      const dot=document.createElement('button');
-      dot.type='button';
-      dot.className='e360-seat-dot';
-      dot.style.setProperty('--party',partyColor(c.party));
-      dot.title=`${c.nmu||c.nm||'Candidatura'} • ${c.party||''} • ${fmt.format(num(c.vap))} votos`;
-      dot.setAttribute('aria-label',dot.title);
-      dot.addEventListener('click',()=>{
-        markOffice(key);
-        navigateRace(key,state.uf);
-        setExplorer(true);
-      });
-      dots.appendChild(dot);
+  function renderSeatCard(button,j,key,label){
+    const d=seatData(j,key);
+    if(!d||!d.total){
+      button.innerHTML=`<span>${safe(label)}</span><strong>—</strong><small>Aguardando composição</small>`;
+      button.onclick=()=>openRace(key,state.uf);
+      return;
     }
-    legend.innerHTML=[...summary.byParty.entries()].sort((a,b)=>a[0].localeCompare(b[0],'pt-BR')).map(([party,arr])=>`<span><i style="--party:${partyColor(party)}"></i>${safe(party)} <b>${arr.length}</b></span>`).join('');
+    const parts=[...d.by.entries()].sort((a,b)=>a[0].localeCompare(b[0],'pt-BR'));
+    const segments=parts.map(([party,count])=>`<i class="e360-segment" style="width:${100*count/d.total}%;--party:${partyColor(party)}" title="${safe(party)} • ${count}"></i>`).join('');
+    const legend=parts.slice(0,6).map(([party,count])=>`<em><i style="--party:${partyColor(party)}"></i>${safe(party)} <b>${count}</b></em>`).join('');
+    button.innerHTML=`<div><span>${safe(label)}</span><strong>${fmt.format(d.total)} cadeiras</strong><small>${d.provisional?'se terminasse agora':'situação oficial'}</small></div><div class="e360-seat-bar">${segments}</div><div class="e360-seat-legend">${legend}</div>`;
+    button.onclick=()=>openRace(key,state.uf);
   }
 
   function renderSeats(){
-    renderSeatDots('expFederalSeats','expFederalLegend',state.races.federalDeputy?.j,'federalDeputy','Câmara • '+state.uf);
-    renderSeatDots('expStateSeats','expStateLegend',state.races.stateDeputy?.j,'stateDeputy',(state.uf==='DF'?'CLDF':'Assembleia')+' • '+state.uf);
+    renderSeatCard(el('expFederalSeats'),state.races.federalDeputy,'federalDeputy','Câmara');
+    renderSeatCard(el('expStateSeats'),state.races.stateDeputy,'stateDeputy',state.uf==='DF'?'CLDF':'Assembleia');
+    const provisional=[state.races.federalDeputy,state.races.stateDeputy].some(j=>seatData(j,j===state.races.federalDeputy?'federalDeputy':'stateDeputy')?.provisional);
+    el('expSeatNote').textContent=provisional
+      ? 'Composição parcial baseada nas vagas informadas pelo TSE na carga atual. Pode mudar até a totalização final.'
+      : 'Composição baseada na situação oficial publicada pelo TSE.';
   }
 
-  function renderPassport(){
-    let visited=[],offices=[];
-    try{visited=JSON.parse(localStorage.getItem(STORAGE.visited)||'[]')}catch{}
-    try{offices=JSON.parse(localStorage.getItem(STORAGE.offices)||'[]')}catch{}
-    el('expPassportCount').textContent=`${visited.length}/27 UFs`;
-    el('expPassportBar').style.width=`${100*visited.length/27}%`;
-    el('expOfficeCount').textContent=`${offices.length}/5 cargos`;
-    el('expOfficeBar').style.width=`${100*offices.length/5}%`;
-    const grid=el('expPassportGrid');
-    grid.innerHTML=CFG.ufs.map(uf=>`<button type="button" data-uf="${uf}" class="${visited.includes(uf)?'visited':''}"><strong>${uf}</strong><small>${visited.includes(uf)?'✓ explorado':UF[uf]}</small></button>`).join('');
-    grid.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>changeUf(b.dataset.uf,true)));
-  }
-
-  function renderDiscovery(){
-    const stateCompleted=officeSpecs.filter(([key])=>state.races[key]?.j&&raceMetrics(state.races[key].j).sections>=99.99).length;
-    el('expDiscovery').innerHTML=`
-      <button data-jump="state"><span>01</span><strong>Meu estado em 1 tela</strong><small>${state.uf}: ${stateCompleted}/4 disputas praticamente concluídas</small></button>
-      <button data-jump="seats"><span>02</span><strong>Veja as cadeiras</strong><small>Câmara e ${state.uf==='DF'?'CLDF':'Assembleia'} em uma composição visual</small></button>
-      <button data-jump="passport"><span>03</span><strong>Complete o Brasil</strong><small>Explore as 27 UFs e preencha seu passaporte eleitoral</small></button>
-      <button data-jump="explorer"><span>04</span><strong>Explorer completo</strong><small>Filtros, candidaturas, comparação e matemática da apuração</small></button>`;
-    el('expDiscovery').querySelectorAll('[data-jump]').forEach(b=>b.addEventListener('click',()=>jumpTo(b.dataset.jump)));
-  }
-
-  function jumpTo(target){
-    if(target==='explorer'){setExplorer(true);return}
-    setExplorer(false);
-    const map={state:'expStateSection',seats:'expSeatsSection',passport:'expPassportSection',home:'expHero'};
-    el(map[target]||'expHero')?.scrollIntoView({behavior:'smooth',block:'start'});
-  }
-
-  async function changeUf(uf,scroll=false){
+  async function changeUf(uf){
     state.uf=uf;
-    localStorage.setItem(STORAGE.uf,uf);
-    markVisited(uf);
-    el('expStateSelect').value=uf;
+    localStorage.setItem('e360-uf',uf);
     await loadState();
-    renderState();renderSeats();renderPassport();renderDiscovery();
-    if(scroll)el('expStateSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+    renderState();
+    renderSeats();
   }
 
   async function loadState(){
+    const rows=await Promise.all(specs.map(async([key])=>[key,await loadJson(key,state.uf)]));
+    state.races=Object.fromEntries(rows);
+  }
+
+  async function refresh(){
+    if(state.loading)return;
     state.loading=true;
-    const settled=await Promise.all(officeSpecs.map(async([key])=>[key,await loadJson(key,state.uf)]));
-    state.races=Object.fromEntries(settled);
+    state.national=await loadJson('president','BR');
+    await loadState();
+    renderNational();
+    renderState();
+    renderSeats();
+    el('expLoading').hidden=true;
+    el('experienceContent').hidden=false;
     state.loading=false;
   }
 
-  async function refreshExperience(){
-    if(state.loading)return;
-    const national=await loadJson('president','BR');
-    state.national=national;
-    await loadState();
-    renderHero();renderReturnCard();renderState();renderSeats();renderPassport();renderDiscovery();
-    el('expLoading').hidden=true;
-    el('experienceContent').hidden=false;
-  }
-
-  function shareCanvas(){
-    const canvas=document.createElement('canvas');
-    canvas.width=1080;canvas.height=1920;
-    const ctx=canvas.getContext('2d');
-    ctx.fillStyle='#f5f7f8';ctx.fillRect(0,0,1080,1920);
-    ctx.fillStyle='#111827';ctx.fillRect(0,0,1080,210);
-    ctx.fillStyle='#fff';ctx.font='900 72px system-ui';ctx.fillText('ELEIÇÃO 360',72,105);
-    ctx.font='500 30px system-ui';ctx.fillText('Eleições 2026 • dados oficiais do TSE',72,160);
-
-    const nat=raceMetrics(state.national?.j);
-    const lines=[
-      ['BRASIL EM 30s',nat?`${pctFmt.format(nat.sections)}% das seções`:'—'],
-      [`${state.uf} • ${UF[state.uf]}`,'Meu estado em 1 tela'],
-      ['Câmara',seatSummary(state.races.federalDeputy?.j,'federalDeputy')?.items.length+' cadeiras'],
-      [state.uf==='DF'?'CLDF':'Assembleia',seatSummary(state.races.stateDeputy?.j,'stateDeputy')?.items.length+' cadeiras']
-    ];
-    let y=330;
-    for(const [a,b] of lines){
-      ctx.fillStyle='#fff';ctx.strokeStyle='#d9dee3';ctx.lineWidth=2;
-      roundRect(ctx,60,y,960,250,34);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#0f766e';ctx.font='800 28px system-ui';ctx.fillText(a,105,y+70);
-      ctx.fillStyle='#111827';ctx.font='900 58px system-ui';ctx.fillText(String(b),105,y+145);
-      y+=285;
-    }
-    ctx.fillStyle='#111827';ctx.font='900 44px system-ui';ctx.fillText('Explore. Descubra. Compartilhe.',72,1585);
-    ctx.fillStyle='#667085';ctx.font='500 28px system-ui';
-    wrapText(ctx,'Uma fotografia dos dados oficiais da eleição, com drill-down por UF, cargos e cadeiras.',72,1640,900,42);
-    ctx.fillStyle='#0f766e';ctx.font='800 30px system-ui';ctx.fillText('brunobdantas.github.io/bosnia01',72,1810);
-    ctx.fillStyle='#98a2b3';ctx.font='500 22px system-ui';ctx.fillText('Painel independente • Fonte: Tribunal Superior Eleitoral',72,1860);
-    return canvas;
-  }
-
-  function roundRect(ctx,x,y,w,h,r){
-    ctx.beginPath();ctx.roundRect(x,y,w,h,r);
-  }
-  function wrapText(ctx,text,x,y,maxWidth,lineHeight){
-    const words=text.split(' ');let line='';
-    for(const word of words){
-      const test=line+word+' ';
-      if(ctx.measureText(test).width>maxWidth&&line){ctx.fillText(line,x,y);line=word+' ';y+=lineHeight}
-      else line=test;
-    }
-    if(line)ctx.fillText(line,x,y);
-  }
-
-  async function shareExperience(){
-    const canvas=shareCanvas();
-    const blob=await new Promise(res=>canvas.toBlob(res,'image/png',.92));
-    const file=new File([blob],'eleicao-360.png',{type:'image/png'});
-    const shareData={title:'Eleição 360',text:`Eleição 2026 • ${state.uf} e Brasil em uma experiência visual.`,url:location.origin+location.pathname};
-    try{
-      if(navigator.share&&navigator.canShare?.({files:[file]})){
-        await navigator.share({...shareData,files:[file]});
-      }else if(navigator.share){
-        await navigator.share(shareData);
-      }else{
-        await navigator.clipboard.writeText(shareData.url);
-        toast('Link copiado para compartilhar');
-      }
-    }catch(e){
-      if(e?.name!=='AbortError')toast('Não foi possível abrir o compartilhamento');
-    }
-  }
-
   function toast(msg){
-    const t=el('expToast');t.textContent=msg;t.hidden=false;
-    clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600);
+    const t=el('expToast');
+    t.textContent=msg;t.hidden=false;
+    clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2200);
   }
 
-  function tvMode(){
-    document.body.classList.toggle('e360-tv');
-    if(document.body.classList.contains('e360-tv')){
-      document.documentElement.requestFullscreen?.().catch(()=>{});
-      jumpTo('home');
-    }else if(document.fullscreenElement)document.exitFullscreen?.();
+  function cardCanvas(){
+    const c=document.createElement('canvas');
+    c.width=1080;c.height=1350;
+    const x=c.getContext('2d');
+    x.fillStyle='#ffffff';x.fillRect(0,0,c.width,c.height);
+    x.fillStyle='#101828';x.font='900 64px system-ui';x.fillText('ELEIÇÃO 360',70,105);
+    x.fillStyle='#667085';x.font='500 26px system-ui';x.fillText('Eleições 2026 • fonte TSE',70,150);
+    const m=raceMetrics(state.national);
+    x.fillStyle='#0f766e';x.font='900 150px system-ui';x.fillText(m?`${pfmt.format(m.sections)}%`:'—',70,340);
+    x.fillStyle='#475467';x.font='600 28px system-ui';x.fillText('das seções totalizadas no Brasil',76,390);
+    x.fillStyle='#101828';x.font='800 46px system-ui';x.fillText(`${state.uf} • ${UF[state.uf]}`,70,520);
+    const rows=specs.map(([key,label])=>{
+      const j=state.races[key],rm=raceMetrics(j),e=j?elected(j,key):{items:[],provisional:false};
+      return [key==='stateDeputy'&&state.uf==='DF'?'CLDF':label,rm?`${pfmt.format(rm.sections)}%`:'—',e.items.length?`${e.items.length} ${e.provisional?'cadeiras na parcial':'eleitos'}`:'—'];
+    });
+    let y=620;
+    for(const [a,b,d] of rows){
+      x.fillStyle='#f5f7f8';x.beginPath();x.roundRect(60,y,960,130,24);x.fill();
+      x.fillStyle='#101828';x.font='800 30px system-ui';x.fillText(a,90,y+50);
+      x.font='900 38px system-ui';x.fillText(b,90,y+98);
+      x.fillStyle='#667085';x.font='600 24px system-ui';x.fillText(d,430,y+88);
+      y+=150;
+    }
+    x.fillStyle='#98a2b3';x.font='500 22px system-ui';x.fillText('brunobdantas.github.io/bosnia01',70,1280);
+    return c;
+  }
+
+  async function share(){
+    const canvas=cardCanvas();
+    const blob=await new Promise(r=>canvas.toBlob(r,'image/png',.92));
+    const file=new File([blob],'eleicao-360.png',{type:'image/png'});
+    const payload={title:'Eleição 360',text:`Resultados das Eleições 2026 • ${state.uf}`,url:location.origin+location.pathname};
+    try{
+      if(navigator.share&&navigator.canShare?.({files:[file]}))await navigator.share({...payload,files:[file]});
+      else if(navigator.share)await navigator.share(payload);
+      else{await navigator.clipboard.writeText(payload.url);toast('Link copiado')}
+    }catch(e){if(e?.name!=='AbortError')toast('Não foi possível compartilhar')}
   }
 
   function wire(){
     document.body.classList.add('experience-ready');
     el('expStateSelect').innerHTML=CFG.ufs.map(uf=>`<option value="${uf}">${uf} • ${UF[uf]}</option>`).join('');
     el('expStateSelect').value=state.uf;
-    el('expStateSelect').addEventListener('change',e=>changeUf(e.target.value,true));
-    el('expShareButton').addEventListener('click',shareExperience);
-    el('expTvButton').addEventListener('click',tvMode);
+    el('expStateSelect').addEventListener('change',e=>changeUf(e.target.value));
     el('expOpenExplorer').addEventListener('click',()=>setExplorer(true));
-    document.querySelectorAll('[data-exp-nav]').forEach(b=>b.addEventListener('click',()=>jumpTo(b.dataset.expNav)));
-    document.querySelectorAll('#raceTabs button').forEach(b=>b.addEventListener('click',()=>markOffice(b.dataset.race)));
-    el('experienceBrand')?.addEventListener('click',e=>{e.preventDefault();setExplorer(false);jumpTo('home')});
+    el('expShareButton').addEventListener('click',share);
+    el('expPresidentOpen').addEventListener('click',()=>openRace('president','BR'));
+    el('experienceBrand')?.addEventListener('click',e=>{e.preventDefault();setExplorer(false)});
   }
 
-  markVisited(state.uf);
   wire();
-  refreshExperience();
-  setInterval(()=>{if(!document.hidden)refreshExperience()},60000);
+  refresh();
+  setInterval(()=>{if(!document.hidden)refresh()},60000);
 })();

@@ -1,4 +1,4 @@
-name: Smoke test Eleição 360
+name: Smoke test Eleição 360 limpa
 
 on:
   push:
@@ -14,30 +14,7 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Validar fontes oficiais essenciais
-        shell: bash
-        run: |
-          set -euo pipefail
-          urls=(
-            "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json"
-            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0003-e006259-u.json"
-            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0005-e006259-u.json"
-            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0006-e006259-u.json"
-            "https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c0008-e006259-u.json"
-          )
-          for u in "${urls[@]}"; do
-            ok=0
-            for i in $(seq 1 5); do
-              if curl -fsS -H "Accept: application/json" --max-time 30 "$u" -o /tmp/e.json                 && node -e "const j=JSON.parse(require('fs').readFileSync('/tmp/e.json','utf8'));if(!j.carg)process.exit(2)" >/dev/null 2>&1; then
-                ok=1
-                break
-              fi
-              sleep 4
-            done
-            test "$ok" = "1"
-          done
-
-      - name: Validar sintaxe dos módulos
+      - name: Validar sintaxe
         shell: bash
         run: |
           set -euo pipefail
@@ -47,14 +24,14 @@ jobs:
           cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/experience.js > /tmp/all.js
           node -e "new Function(require('fs').readFileSync('/tmp/all.js','utf8')); console.log('syntax-ok')"
 
-      - name: Aguardar versão publicada
+      - name: Aguardar publicação
         shell: bash
         run: |
           set -euo pipefail
           ok=0
           for i in $(seq 1 40); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-election360-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-clean-1"'; then
               ok=1
               break
             fi
@@ -62,7 +39,7 @@ jobs:
           done
           test "$ok" = "1"
 
-      - name: Executar home em Chrome real
+      - name: Validar home limpa em Chrome real
         shell: bash
         run: |
           set -euo pipefail
@@ -76,11 +53,14 @@ jobs:
               exit 1
             fi
 
-            if grep -q 'id="experienceApp"' /tmp/dom               && grep -q 'Eleição 360' /tmp/dom               && grep -q 'id="expHeroProgress"' /tmp/dom               && ! grep -q 'id="expHeroProgress">—' /tmp/dom               && grep -q 'id="expStateCards"' /tmp/dom               && grep -q 'class="e360-race-card"' /tmp/dom               && grep -q 'class="e360-seat-dot"' /tmp/dom               && grep -q 'id="expPassportGrid"' /tmp/dom               && grep -q 'id="expShareButton"' /tmp/dom; then
+            races="$(grep -o 'class="e360-race-row"' /tmp/dom | wc -l | tr -d ' ')"
+            seats="$(grep -o 'class="e360-seat-card"' /tmp/dom | wc -l | tr -d ' ')"
+
+            if grep -q 'id="expHeroProgress"' /tmp/dom               && ! grep -q 'id="expHeroProgress">—' /tmp/dom               && test "$races" = "4"               && test "$seats" = "2"               && grep -q 'class="e360-segment"' /tmp/dom               && grep -q 'id="expOpenExplorer"' /tmp/dom               && grep -q 'id="expShareButton"' /tmp/dom               && ! grep -q 'PASSAPORTE ELEITORAL' /tmp/dom               && ! grep -q 'Modo TV' /tmp/dom               && ! grep -q 'DESCUBRA A ELEIÇÃO' /tmp/dom; then
               ok=1
               break
             fi
             sleep 5
           done
           test "$ok" = "1"
-          echo "Smoke Eleição 360 aprovado."
+          echo "Smoke da home limpa aprovado."

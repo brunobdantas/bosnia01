@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="build" content="20261005-election360-1">
+<meta name="build" content="20261005-clean-1">
 <meta name="description" content="Apuração das Eleições 2026 com dados oficiais do TSE, atualização automática e navegação por cargo e UF.">
 <title>Apuração 2026 • Resultados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
 <link rel="stylesheet" href="uol.css?v=20261005-historyscope-1">
-<link rel="stylesheet" href="experience.css?v=20261005-election360-1">
+<link rel="stylesheet" href="experience.css?v=20261005-clean-1">
 </head>
 <body>
 <header class="site-header">
@@ -29,133 +29,74 @@
 </header>
 
 <main id="experienceApp" aria-label="Eleição 360">
-  <div class="e360-loading" id="expLoading">Carregando a eleição…</div>
+  <div class="e360-loading" id="expLoading">Carregando dados oficiais…</div>
 
   <div id="experienceContent" hidden>
-    <section class="e360-hero" id="expHero">
-      <div class="e360-hero-grid">
-        <div>
-          <p class="e360-eyebrow">ELEIÇÕES 2026 • EXPERIÊNCIA INTERATIVA</p>
-          <h1>A eleição inteira.<br>Em uma experiência.</h1>
-          <p class="e360-hero-lead">Não veja apenas o resultado. Explore o Brasil, mergulhe em cada UF, visualize cadeiras e descubra o que os dados oficiais do TSE contam.</p>
-          <div class="e360-hero-actions">
-            <button class="e360-btn primary" type="button" data-exp-nav="state">Explorar meu estado</button>
-            <button class="e360-btn" type="button" data-exp-nav="seats">Ver cadeiras</button>
-            <button class="e360-btn" id="expShareButton" type="button">Compartilhar Story</button>
-            <button class="e360-btn" id="expTvButton" type="button">Modo TV</button>
-          </div>
+    <section class="e360-summary" id="expHero">
+      <div class="e360-summary-copy">
+        <p class="e360-eyebrow">ELEIÇÕES 2026 • DADOS OFICIAIS DO TSE</p>
+        <h1>Resultados, sem ruído.</h1>
+        <p>Brasil, sua UF e a composição das cadeiras em uma leitura direta.</p>
+        <div class="e360-actions">
+          <button class="e360-primary" id="expOpenExplorer" type="button">Abrir Explorer</button>
+          <button class="e360-secondary" id="expShareButton" type="button">Compartilhar</button>
         </div>
+      </div>
 
-        <div>
-          <div class="e360-progress-card">
-            <span>BRASIL EM 30 SEGUNDOS</span>
-            <strong id="expHeroProgress">—</strong>
-            <div class="e360-progress-track"><i id="expHeroProgressBar"></i></div>
-            <small id="expHeroStamp">Conectando ao TSE…</small>
-          </div>
-
-          <div class="e360-strip">
-            <div class="e360-stat"><span>Votos válidos</span><strong id="expStatValid">—</strong><small>Presidência</small></div>
-            <div class="e360-stat"><span>Brancos</span><strong id="expStatBlank">—</strong><small>carga nacional</small></div>
-            <div class="e360-stat"><span>Nulos</span><strong id="expStatNull">—</strong><small>carga nacional</small></div>
-            <div class="e360-stat"><span>Seções</span><strong id="expStatSections">—</strong><small>totalizadas</small></div>
-          </div>
-        </div>
+      <div class="e360-progress">
+        <span>BRASIL</span>
+        <strong id="expHeroProgress">—</strong>
+        <small>das seções totalizadas</small>
+        <div><i id="expHeroProgressBar"></i></div>
+        <em id="expHeroStamp">Conectando ao TSE…</em>
       </div>
     </section>
 
-    <section class="e360-return" id="expReturnCard" hidden></section>
-
-    <section class="e360-section">
-      <div class="e360-section-head">
+    <section class="e360-national">
+      <button type="button" id="expPresidentOpen">
         <div>
-          <p class="e360-eyebrow">PRESIDÊNCIA • BRASIL</p>
-          <h2>Uma leitura rápida da disputa nacional</h2>
-          <p>Todos os nomes aparecem em ordem de número de urna. Toque em uma candidatura para abrir o Explorer completo.</p>
+          <span>Presidência</span>
+          <strong id="expPresidentStatus">Resultado nacional</strong>
+          <small id="expPresidentMeta">Carregando…</small>
         </div>
+        <i>›</i>
+      </button>
+
+      <div class="e360-national-stats">
+        <div><span>Válidos</span><strong id="expStatValid">—</strong></div>
+        <div><span>Brancos</span><strong id="expStatBlank">—</strong></div>
+        <div><span>Nulos</span><strong id="expStatNull">—</strong></div>
       </div>
-      <div class="e360-candidate-grid" id="expNationalCandidates"></div>
     </section>
 
-    <section class="e360-section">
-      <div class="e360-section-head">
+    <section class="e360-state" id="expStateSection">
+      <header>
         <div>
-          <p class="e360-eyebrow">DESCUBRA A ELEIÇÃO</p>
-          <h2>Quatro caminhos. Um Brasil inteiro.</h2>
-          <p>Escolha o que quer entender em vez de começar por uma tabela.</p>
-        </div>
-      </div>
-      <div class="e360-discovery" id="expDiscovery"></div>
-    </section>
-
-    <section class="e360-section" id="expStateSection">
-      <div class="e360-section-head">
-        <div>
-          <p class="e360-eyebrow">MEU ESTADO EM 1 TELA</p>
+          <p class="e360-eyebrow">SUA UF</p>
           <h2 id="expStateName">DF • Distrito Federal</h2>
-          <p>Governador, Senado, Câmara e Assembleia/CLDF em um único lugar.</p>
         </div>
         <select id="expStateSelect" aria-label="Escolher estado"></select>
-      </div>
-      <div class="e360-state-grid" id="expStateCards"></div>
+      </header>
+
+      <div class="e360-race-list" id="expStateCards"></div>
     </section>
 
-    <section class="e360-section" id="expSeatsSection">
-      <div class="e360-section-head">
+    <section class="e360-seats" id="expSeatsSection">
+      <header>
         <div>
           <p class="e360-eyebrow">CADEIRAS</p>
-          <h2>Veja a representação tomando forma</h2>
-          <p>Cada ponto representa uma cadeira da UF escolhida. Em apurações abertas, a composição usa a fotografia atual das vagas do TSE; quando finalizada, usa a situação oficial.</p>
+          <h2 id="expSeatsTitle">Composição no DF</h2>
         </div>
-      </div>
-      <div class="e360-seats-grid">
-        <article class="e360-seat-panel">
-          <div id="expFederalSeats"></div>
-          <div class="e360-legend" id="expFederalLegend"></div>
-        </article>
-        <article class="e360-seat-panel">
-          <div id="expStateSeats"></div>
-          <div class="e360-legend" id="expStateLegend"></div>
-        </article>
-      </div>
-    </section>
+      </header>
 
-    <section class="e360-section" id="expPassportSection">
-      <div class="e360-section-head">
-        <div>
-          <p class="e360-eyebrow">PASSAPORTE ELEITORAL</p>
-          <h2>Complete o Brasil</h2>
-          <p>Explore as 27 UFs e os cinco cargos. O progresso fica salvo apenas neste navegador.</p>
-        </div>
-        <div class="e360-share-row">
-          <button id="expOpenExplorer" type="button">Abrir Explorer completo</button>
-          <button class="secondary" type="button" data-exp-nav="home">Voltar ao início</button>
-        </div>
+      <div class="e360-seat-bars">
+        <button type="button" class="e360-seat-card" id="expFederalSeats"></button>
+        <button type="button" class="e360-seat-card" id="expStateSeats"></button>
       </div>
-
-      <div class="e360-passport-metrics">
-        <div class="e360-progress-mini">
-          <header><strong>UFs exploradas</strong><span id="expPassportCount">0/27 UFs</span></header>
-          <div><i id="expPassportBar"></i></div>
-        </div>
-        <div class="e360-progress-mini">
-          <header><strong>Cargos explorados</strong><span id="expOfficeCount">0/5 cargos</span></header>
-          <div><i id="expOfficeBar"></i></div>
-        </div>
-      </div>
-
-      <div class="e360-passport-grid" id="expPassportGrid"></div>
+      <p class="e360-seat-note" id="expSeatNote"></p>
     </section>
   </div>
 </main>
-
-<nav class="e360-bottom" aria-label="Navegação Eleição 360">
-  <button type="button" data-exp-nav="home">Início</button>
-  <button type="button" data-exp-nav="state">Estado</button>
-  <button type="button" data-exp-nav="seats">Cadeiras</button>
-  <button type="button" data-exp-nav="passport">Passaporte</button>
-  <button type="button" data-exp-nav="explorer">Explorer</button>
-</nav>
 
 <div class="e360-toast" id="expToast" hidden></div>
 
@@ -352,6 +293,6 @@
 <script src="uol-ui-2.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-ui-3.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-runtime.js?v=20261005-historyscope-1" defer></script>
-<script src="experience.js?v=20261005-election360-1" defer></script>
+<script src="experience.js?v=20261005-clean-1" defer></script>
 </body>
 </html>
