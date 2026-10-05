@@ -21,3 +21,8 @@
 .definition-banner[hidden]{display:none}.definition-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#168454;color:#fff;font-size:1.2rem;font-weight:900}.definition-copy>span{display:block;color:#13714b;font-size:.64rem;font-weight:900;letter-spacing:.1em}.definition-copy>strong{display:block;margin-top:3px;font-size:1.08rem}.definition-copy>p{margin:4px 0 0;color:#4f645a;font-size:.75rem;line-height:1.45}.definition-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.definition-chip{display:inline-flex;align-items:center;min-height:29px;padding:0 9px;border-radius:999px;font-size:.66rem;font-weight:800}.definition-chip.elected{background:#dff3e8;color:#116b43}.definition-chip.runoff{background:#fff0cf;color:#875000}.definition-chip.more{background:#eef0f2;color:#555}
 .status-badge.elected{font-size:.66rem;padding:5px 9px}.candidate-row.status-elected{background:linear-gradient(90deg,#f2fbf6 0,#fff 34%)}.candidate-row.status-elected .candidate-info>small{color:#4e6c5e}
 @media(max-width:680px){.definition-banner{grid-template-columns:38px minmax(0,1fr);padding:13px}.definition-icon{width:36px;height:36px}.definition-chips{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.definition-chips::-webkit-scrollbar{display:none}.definition-chip{flex:0 0 auto}}
+
+.status-pending{grid-column:1/-1;display:grid;gap:3px;padding:10px 12px;border:1px solid #e7d5a8;border-radius:9px;background:#fff8e8;color:#72531a}
+.status-pending[hidden]{display:none}.status-pending strong{font-size:.73rem}.status-pending span{font-size:.68rem;line-height:1.45;color:#765f31}
+.select-field select:disabled{background:#f1f2f3;color:#7a8087;cursor:not-allowed;opacity:1}
+@media(max-width:680px){.status-pending{grid-column:1}}

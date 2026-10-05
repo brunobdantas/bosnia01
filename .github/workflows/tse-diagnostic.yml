@@ -1,44 +1,50 @@
-name: Diagnóstico MG situações
+name: Smoke test da apuração
 
 on:
   push:
     paths:
+      - "index.html"
+      - "uol-*.js"
+      - "uol.css"
       - ".github/workflows/tse-diagnostic.yml"
 
 jobs:
-  inspect:
+  smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspecionar Deputado Estadual MG
+      - name: Aguardar versão publicada
         shell: bash
         run: |
           set -euo pipefail
-          u="https://resultados.tse.jus.br/oficial/ele2026/6259/dados/mg/mg-c0007-e006259-u.json"
-          curl -sS --max-time 30 "$u" -o /tmp/mg.json
-          node - <<'NODE'
-          const fs=require('fs');
-          const j=JSON.parse(fs.readFileSync('/tmp/mg.json','utf8'));
-          const rows=[];
-          for(const cargo of j.carg||[])for(const agr of cargo.agr||[])for(const par of agr.par||[])for(const c of par.cand||[]){
-            rows.push({n:c.n,nmu:c.nmu,e:c.e,st:c.st,vap:c.vap,pvap:c.pvap,dvt:c.dvt,party:par.sg});
-          }
-          const counts=(field)=>Object.fromEntries([...new Set(rows.map(x=>String(x[field]??'')))].map(v=>[v,rows.filter(x=>String(x[field]??'')===v).length]));
-          console.log(JSON.stringify({
-            idg:j.idg,dg:j.dg,hg:j.hg,tf:j.tf,md:j.md,sections:j.s,
-            total:rows.length,
-            eCounts:counts('e'),
-            stCounts:counts('st'),
-            sampleDefined:rows.filter(x=>String(x.e||'').toLowerCase()==='s'||String(x.st||'').trim()).slice(0,40)
-          },null,2));
-          NODE
+          ok=0
+          for i in $(seq 1 36); do
+            url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-statusavailability-1"'; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          test "$ok" = "1"
 
-      - name: Executar MG no Chrome publicado
+      - name: Validar MG sem situação oficial e DF com situação
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=MG&diag=${GITHUB_SHA}" > /tmp/dom 2> /tmp/chrome.log || true
-          echo "rows=$(grep -o 'class="candidate-row' /tmp/dom | wc -l | tr -d ' ')"
-          echo "badges=$(grep -o 'class="status-badge ' /tmp/dom | wc -l | tr -d ' ')"
-          grep -o '<option value="[^"]*">[^<]*</option>' /tmp/dom | grep -E 'situa|Eleit|Supl|Não|2º' | head -n 30 || true
-          grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log || true
+
+          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=MG&smoke=${GITHUB_SHA}" > /tmp/mg 2> /tmp/mg.log || true
+          ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/mg.log
+          grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/mg
+          grep -q 'id="statusFilter" disabled' /tmp/mg
+          grep -q 'Aguardando definição oficial do TSE' /tmp/mg
+          grep -q 'Situação oficial ainda não publicada pelo TSE' /tmp/mg
+
+          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=DF&smoke=${GITHUB_SHA}" > /tmp/df 2> /tmp/df.log || true
+          ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/df.log
+          grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/df
+          ! grep -q 'id="statusFilter" disabled' /tmp/df
+          grep -q 'value="elected"' /tmp/df
+          grep -q 'value="alternate"' /tmp/df
+
+          echo "Smoke MG/DF aprovado."

@@ -44,10 +44,27 @@ function renderFilters(){
   ];
   const present=new Set(candidates.map(statusMeta).filter(Boolean).map(s=>s.key));
   const select=$('statusFilter');
-  select.innerHTML='<option value="all">Todas as situações</option>'+order.filter(([key])=>present.has(key)).map(([key,label])=>`<option value="${key}">${label}</option>`).join('');
-  if(statusFilter!=='all'&&!present.has(statusFilter))statusFilter='all';
-  select.value=statusFilter;
-  $('statusField').hidden=present.size===0;
+  const pending=$('statusPending');
+  if(present.size===0){
+    statusFilter='all';
+    select.innerHTML='<option value="all">Aguardando definição oficial do TSE</option>';
+    select.value='all';
+    select.disabled=true;
+    $('statusField').hidden=false;
+    if(pending){
+      const m=metrics(data,null);
+      const sections=m.totalSections?`${fi.format(m.doneSections)} de ${fi.format(m.totalSections)} seções totalizadas`:`totalização ainda em andamento`;
+      pending.hidden=false;
+      pending.innerHTML=`<strong>Situação oficial ainda não publicada pelo TSE.</strong><span>${sections}. O filtro será ativado automaticamente assim que o arquivo oficial trouxer a situação das candidaturas. Outros portais podem exibir “eleito se terminasse agora”, que é uma leitura da parcial e não o status oficial final.</span>`;
+    }
+  }else{
+    select.disabled=false;
+    select.innerHTML='<option value="all">Todas as situações</option>'+order.filter(([key])=>present.has(key)).map(([key,label])=>`<option value="${key}">${label}</option>`).join('');
+    if(statusFilter!=='all'&&!present.has(statusFilter))statusFilter='all';
+    select.value=statusFilter;
+    $('statusField').hidden=false;
+    if(pending)pending.hidden=true;
+  }
   $('filters').hidden=!prop&&present.size===0;
 }
 function candidateVisibleList(){
