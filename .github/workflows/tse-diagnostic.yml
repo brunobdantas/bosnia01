@@ -12,6 +12,24 @@ jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
+      - name: Validar vag da parcial de MG
+        shell: bash
+        run: |
+          set -euo pipefail
+          u="https://resultados.tse.jus.br/oficial/ele2026/6259/dados/mg/mg-c0007-e006259-u.json"
+          curl -sS --max-time 30 "$u" -o /tmp/mg.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const j=JSON.parse(fs.readFileSync('/tmp/mg.json','utf8'));
+          let seats=0, groups=0;
+          for(const cargo of j.carg||[])for(const agr of cargo.agr||[]){
+            const v=Number(String(agr.vag??0).replace(',','.'))||0;
+            if(v>0){groups++;seats+=v}
+          }
+          console.log(JSON.stringify({idg:j.idg,sections:j.s?.pstn,tf:j.tf,groupsWithSeats:groups,seats}));
+          if(seats<1)throw new Error('TSE não informou vagas parciais em agr.vag para MG');
+          NODE
+
       - name: Aguardar versão publicada
         shell: bash
         run: |
@@ -19,7 +37,7 @@ jobs:
           ok=0
           for i in $(seq 1 36); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-statusavailability-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-currentelected-1"'; then
               ok=1
               break
             fi
@@ -27,24 +45,19 @@ jobs:
           done
           test "$ok" = "1"
 
-      - name: Validar MG sem situação oficial e DF com situação
+      - name: Validar eleito se terminasse agora em MG
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-
           "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=MG&smoke=${GITHUB_SHA}" > /tmp/mg 2> /tmp/mg.log || true
+
           ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/mg.log
           grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/mg
-          grep -q 'id="statusFilter" disabled' /tmp/mg
-          grep -q 'Aguardando definição oficial do TSE' /tmp/mg
-          grep -q 'Situação oficial ainda não publicada pelo TSE' /tmp/mg
+          ! grep -q 'id="statusFilter" disabled' /tmp/mg
+          grep -q 'value="current-elected"' /tmp/mg
+          grep -q 'Eleito se terminasse agora' /tmp/mg
+          grep -q 'status-chip current-elected' /tmp/mg
+          grep -q 'id="definitionBanner" class="definition-banner partial"' /tmp/mg
 
-          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=DF&smoke=${GITHUB_SHA}" > /tmp/df 2> /tmp/df.log || true
-          ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/df.log
-          grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/df
-          ! grep -q 'id="statusFilter" disabled' /tmp/df
-          grep -q 'value="elected"' /tmp/df
-          grep -q 'value="alternate"' /tmp/df
-
-          echo "Smoke MG/DF aprovado."
+          echo "Smoke da parcial proporcional de MG aprovado."

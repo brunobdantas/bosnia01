@@ -63,14 +63,58 @@ const distinctKey=j=>String(j?.idg||[j?.dg,j?.hg,j?.s?.st,j?.v?.tv].join('|'));
 
 function flattenCandidates(j){
   const out=[];
-  for(const cargo of j?.carg||[])for(const agr of cargo?.agr||[])for(const par of agr?.par||[])for(const cand of par?.cand||[]){
-    out.push({...cand,party:par?.sg||'',partyName:par?.nm||'',group:agr?.nm||'',destination:cand?.dvt||par?.dvt||''});
+  for(const cargo of j?.carg||[]){
+    (cargo?.agr||[]).forEach((agr,agrIndex)=>{
+      const agrKey=`agr-${agrIndex}|${String(agr?.sqagr||agr?.n||agr?.nm||'')}`;
+      const agrSeats=Math.max(0,num(agr?.vag));
+      for(const par of agr?.par||[])for(const cand of par?.cand||[]){
+        out.push({
+          ...cand,
+          party:par?.sg||'',
+          partyName:par?.nm||'',
+          group:agr?.nm||'',
+          agrKey,
+          agrSeats,
+          destination:cand?.dvt||par?.dvt||''
+        });
+      }
+    });
   }
   return out;
 }
 function validDestination(c){
   const d=String(c?.destination||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
   return !d||d.startsWith('valido');
+}
+
+let provisionalSeatCache={key:'',ids:new Set(),seatCount:0};
+function provisionalSeatSet(){
+  if(!office().proportional||!data)return new Set();
+  const cacheKey=`${officeKey}|${scope}|${distinctKey(data)}`;
+  if(provisionalSeatCache.key===cacheKey)return provisionalSeatCache.ids;
+
+  const groups=new Map();
+  for(const c of candidates){
+    if(!validDestination(c))continue;
+    const key=String(c.agrKey||c.party||'');
+    if(!groups.has(key))groups.set(key,{seats:Math.max(0,num(c.agrSeats)),items:[]});
+    groups.get(key).items.push(c);
+  }
+
+  const ids=new Set();
+  let seatCount=0;
+  for(const g of groups.values()){
+    if(g.seats<=0)continue;
+    g.items.sort((a,b)=>num(b.vap)-num(a.vap)||num(a.n)-num(b.n)||String(a.nmu||a.nm||'').localeCompare(String(b.nmu||b.nm||''),'pt-BR'));
+    for(const c of g.items.slice(0,g.seats))ids.add(String(c.sqcand));
+    seatCount+=Math.min(g.seats,g.items.length);
+  }
+
+  provisionalSeatCache={key:cacheKey,ids,seatCount};
+  return ids;
+}
+function isProvisionalElected(c){
+  return !!(office().proportional&&String(data?.tf||'').toLowerCase()!=='s'&&provisionalSeatSet().has(String(c?.sqcand)));
 }
 function candidateShare(c,j){
   const reported=num(c?.pvap,NaN);
@@ -130,6 +174,7 @@ function statusMeta(c){
     }
     return{key:'elected',label:'Eleito • TSE',icon:'✓',early:!final};
   }
+  if(isProvisionalElected(c))return{key:'current-elected',label:'Eleito se terminasse agora',icon:'1',provisional:true};
   return null;
 }
 function officialStatus(c){return statusMeta(c)?.label||''}

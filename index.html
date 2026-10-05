@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="build" content="20261005-statusavailability-1">
+<meta name="build" content="20261005-currentelected-1">
 <meta name="description" content="Apuração das Eleições 2026 com dados oficiais do TSE, atualização automática e navegação por cargo e UF.">
 <title>Apuração 2026 • Resultados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
-<link rel="stylesheet" href="uol.css?v=20261005-statusavailability-1">
+<link rel="stylesheet" href="uol.css?v=20261005-currentelected-1">
 </head>
 <body>
 <header class="site-header">
@@ -53,7 +53,7 @@
   <section class="definition-banner" id="definitionBanner" hidden aria-live="polite">
     <div class="definition-icon">✓</div>
     <div class="definition-copy">
-      <span>DEFINIÇÃO OFICIAL DO TSE</span>
+      <span id="definitionEyebrow">DEFINIÇÃO OFICIAL DO TSE</span>
       <strong id="definitionTitle">Resultado definido</strong>
       <p id="definitionText"></p>
       <div class="definition-chips" id="definitionChips"></div>
@@ -192,7 +192,7 @@
         <p><strong>Fonte:</strong> arquivos JSON oficiais de resultado unificado do Tribunal Superior Eleitoral.</p>
         <p><strong>Atualização:</strong> o cargo aberto é consultado automaticamente em alta frequência, com pausa quando a aba fica em segundo plano e backoff temporário em falhas.</p>
         <p><strong>Ordenação:</strong> o portal não ordena candidaturas por desempenho eleitoral. A lista usa número de urna para manter uma apresentação neutra.</p>
-        <p><strong>Situação oficial:</strong> os selos reproduzem o campo <code>st</code> do TSE: Eleito, Eleito por QP, Eleito por média, Não eleito, 2º turno ou Suplente. Antes da totalização final, quando o TSE informa apenas que a situação está definida, o portal não presume qual resultado final será atribuído.</p>
+        <p><strong>Situação oficial:</strong> os selos finais reproduzem os campos oficiais do TSE. Nos cargos proporcionais, enquanto a totalização ainda está aberta, o selo <strong>“Eleito se terminasse agora”</strong> usa o campo <code>vag</code> do agrupamento na carga atual e a votação nominal dentro do partido/federação. É uma fotografia da parcial e pode mudar com novas urnas.</p>
       </div>
     </details>
   </section>
@@ -215,10 +215,10 @@
   <a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial do TSE</a>
 </footer>
 
-<script src="uol-core.js?v=20261005-statusavailability-1" defer></script>
-<script src="uol-ui-1.js?v=20261005-statusavailability-1" defer></script>
-<script src="uol-ui-2.js?v=20261005-statusavailability-1" defer></script>
-<script src="uol-ui-3.js?v=20261005-statusavailability-1" defer></script>
-<script src="uol-runtime.js?v=20261005-statusavailability-1" defer></script>
+<script src="uol-core.js?v=20261005-currentelected-1" defer></script>
+<script src="uol-ui-1.js?v=20261005-currentelected-1" defer></script>
+<script src="uol-ui-2.js?v=20261005-currentelected-1" defer></script>
+<script src="uol-ui-3.js?v=20261005-currentelected-1" defer></script>
+<script src="uol-runtime.js?v=20261005-currentelected-1" defer></script>
 </body>
 </html>

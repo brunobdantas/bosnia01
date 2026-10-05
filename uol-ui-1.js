@@ -36,6 +36,7 @@ function renderFilters(){
   }
 
   const order=[
+    ['current-elected','Eleito se terminasse agora'],
     ['elected','Eleitos'],
     ['runoff','2º turno'],
     ['alternate','Suplentes'],
@@ -45,17 +46,18 @@ function renderFilters(){
   const present=new Set(candidates.map(statusMeta).filter(Boolean).map(s=>s.key));
   const select=$('statusFilter');
   const pending=$('statusPending');
+
   if(present.size===0){
     statusFilter='all';
-    select.innerHTML='<option value="all">Aguardando definição oficial do TSE</option>';
+    select.innerHTML='<option value="all">Aguardando definição da parcial</option>';
     select.value='all';
     select.disabled=true;
     $('statusField').hidden=false;
     if(pending){
       const m=metrics(data,null);
-      const sections=m.totalSections?`${fi.format(m.doneSections)} de ${fi.format(m.totalSections)} seções totalizadas`:`totalização ainda em andamento`;
+      const sections=m.totalSections?`${fi.format(m.doneSections)} de ${fi.format(m.totalSections)} seções totalizadas`:'totalização ainda em andamento';
       pending.hidden=false;
-      pending.innerHTML=`<strong>Situação oficial ainda não publicada pelo TSE.</strong><span>${sections}. O filtro será ativado automaticamente assim que o arquivo oficial trouxer a situação das candidaturas. Outros portais podem exibir “eleito se terminasse agora”, que é uma leitura da parcial e não o status oficial final.</span>`;
+      pending.innerHTML=`<strong>Ainda não há distribuição parcial de cadeiras disponível nesta carga.</strong><span>${sections}. O filtro será ativado automaticamente quando o TSE informar vagas em <code>agr.vag</code> ou publicar a situação oficial.</span>`;
     }
   }else{
     select.disabled=false;
@@ -63,10 +65,19 @@ function renderFilters(){
     if(statusFilter!=='all'&&!present.has(statusFilter))statusFilter='all';
     select.value=statusFilter;
     $('statusField').hidden=false;
-    if(pending)pending.hidden=true;
+
+    if(pending&&present.has('current-elected')){
+      const m=metrics(data,null);
+      const count=candidates.filter(c=>statusMeta(c)?.key==='current-elected').length;
+      pending.hidden=false;
+      pending.innerHTML=`<strong>${fi.format(count)} candidatura${count===1?'':'s'} marcada${count===1?'':'s'} como “Eleito se terminasse agora”.</strong><span>Cálculo da carga atual usando o número de vagas <code>vag</code> informado pelo TSE para cada partido/federação e a votação nominal dentro de cada agrupamento. Pode mudar com novas urnas.</span>`;
+    }else if(pending){
+      pending.hidden=true;
+    }
   }
   $('filters').hidden=!prop&&present.size===0;
 }
+
 function candidateVisibleList(){
   const q=$('candidateSearch').value.trim().toLocaleLowerCase('pt-BR');
   const party=$('partyFilter').value;
@@ -118,6 +129,7 @@ function renderCandidates(){
 function renderStatusLegend(){
   const host=$('statusLegend');
   const order=[
+    ['current-elected','Eleito se terminasse agora'],
     ['elected','Eleito'],
     ['runoff','2º turno'],
     ['alternate','Suplente'],
@@ -125,7 +137,7 @@ function renderStatusLegend(){
     ['defined','Situação definida']
   ];
   const counts=new Map();
-  for(const c of candidates){const s=statusMeta(c);if(s)counts.set(s.key,(counts.get(s.key)||0)+1)}
+  for(const c of candidates){const st=statusMeta(c);if(st)counts.set(st.key,(counts.get(st.key)||0)+1)}
   const items=order.filter(([key])=>counts.has(key));
   host.hidden=items.length===0;
   host.innerHTML='';
@@ -138,6 +150,7 @@ function renderStatusLegend(){
     host.appendChild(b);
   }
 }
+
 function renderVoteSummary(m){
   const total=m.totalVotes;
   const p=v=>total?`${fp.format(100*v/total)}%`:'—';
@@ -173,55 +186,55 @@ function renderMath(m){
 }
 function renderDefinitionBanner(){
   const banner=$('definitionBanner');
+  const eyebrow=$('definitionEyebrow');
   const title=$('definitionTitle');
   const text=$('definitionText');
   const chips=$('definitionChips');
   if(!banner||!data)return;
 
   const metas=candidates.map(c=>({c,s:statusMeta(c)})).filter(x=>x.s);
+  const current=metas.filter(x=>x.s.key==='current-elected');
   const elected=metas.filter(x=>x.s.key==='elected');
   const runoff=metas.filter(x=>x.s.key==='runoff');
   const tf=String(data?.tf||'').toLowerCase()==='s';
   const md=String(data?.md||'').toLowerCase();
 
   chips.innerHTML='';
+  eyebrow.textContent='DEFINIÇÃO OFICIAL DO TSE';
+  banner.classList.remove('partial');
   let visible=false;
 
-  if(office().majority&&md==='e'&&elected.length){
+  if(office().proportional&&current.length&&!tf){
+    visible=true;
+    banner.classList.add('partial');
+    eyebrow.textContent='LEITURA DA PARCIAL';
+    title.textContent='Eleito se terminasse agora';
+    text.textContent=`Com a distribuição de vagas informada pelo TSE nesta carga, ${fi.format(current.length)} candidatura${current.length===1?'':'s'} ocuparia${current.length===1?'':'m'} cadeira se a apuração terminasse neste instante. A composição pode mudar com novas urnas.`;
+    for(const x of current.slice(0,12)){
+      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip current-elected">1 ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
+    }
+    if(current.length>12)chips.insertAdjacentHTML('beforeend',`<span class="definition-chip more">+${current.length-12}</span>`);
+  }else if(office().majority&&md==='e'&&elected.length){
     visible=true;
     title.textContent='Resultado matematicamente definido pelo TSE';
-    text.textContent=tf
-      ? 'A totalização final já atribuiu o resultado.'
-      : 'O TSE já marcou a eleição como matematicamente definida, mesmo com seções ainda em totalização.';
-    for(const x of elected){
-      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip elected">✓ ${esc(x.c.nmu||x.c.nm||'Candidatura')} • Eleito</span>`);
-    }
+    text.textContent=tf?'A totalização final já atribuiu o resultado.':'O TSE já marcou a eleição como matematicamente definida, mesmo com seções ainda em totalização.';
+    for(const x of elected)chips.insertAdjacentHTML('beforeend',`<span class="definition-chip elected">✓ ${esc(x.c.nmu||x.c.nm||'Candidatura')} • Eleito</span>`);
   }else if(office().majority&&md==='s'&&runoff.length){
     visible=true;
     title.textContent='Segundo turno matematicamente definido pelo TSE';
-    text.textContent=tf
-      ? 'A totalização final confirmou o segundo turno.'
-      : 'O TSE já informou que haverá 2º turno antes da conclusão de todas as seções.';
-    for(const x of runoff){
-      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip runoff">2º ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
-    }
+    text.textContent=tf?'A totalização final confirmou o segundo turno.':'O TSE já informou que haverá 2º turno antes da conclusão de todas as seções.';
+    for(const x of runoff)chips.insertAdjacentHTML('beforeend',`<span class="definition-chip runoff">2º ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
   }else if(!office().majority&&elected.some(x=>x.s.early)){
     visible=true;
     title.textContent='Eleitos já definidos pelo TSE';
     text.textContent='O arquivo oficial já marca candidatura(s) como eleita(s), embora a totalização da abrangência ainda não tenha sido finalizada.';
-    for(const x of elected.slice(0,12)){
-      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip elected">✓ ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
-    }
-    if(elected.length>12){
-      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip more">+${elected.length-12}</span>`);
-    }
+    for(const x of elected.slice(0,12))chips.insertAdjacentHTML('beforeend',`<span class="definition-chip elected">✓ ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
+    if(elected.length>12)chips.insertAdjacentHTML('beforeend',`<span class="definition-chip more">+${elected.length-12}</span>`);
   }else if(tf&&(elected.length||runoff.length)){
     visible=true;
     title.textContent='Situação oficial do TSE';
     text.textContent='A totalização final já atribuiu a situação oficial das candidaturas.';
-    for(const x of [...elected,...runoff].slice(0,12)){
-      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip ${x.s.key}">${x.s.icon} ${esc(x.c.nmu||x.c.nm||'Candidatura')} • ${esc(x.s.label)}</span>`);
-    }
+    for(const x of [...elected,...runoff].slice(0,12))chips.insertAdjacentHTML('beforeend',`<span class="definition-chip ${x.s.key}">${x.s.icon} ${esc(x.c.nmu||x.c.nm||'Candidatura')} • ${esc(x.s.label)}</span>`);
   }
 
   banner.hidden=!visible;

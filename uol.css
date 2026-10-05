@@ -26,3 +26,14 @@
 .status-pending[hidden]{display:none}.status-pending strong{font-size:.73rem}.status-pending span{font-size:.68rem;line-height:1.45;color:#765f31}
 .select-field select:disabled{background:#f1f2f3;color:#7a8087;cursor:not-allowed;opacity:1}
 @media(max-width:680px){.status-pending{grid-column:1}}
+
+.status-badge.current-elected{background:#eaf2ff;color:#245f91;border:1px solid #bfd3ea}
+.status-chip.current-elected{border-color:#bfd3ea;color:#245f91}
+.status-chip.current-elected.active,.status-chip.current-elected:hover{background:#eaf2ff;color:#174f7c}
+.candidate-row.status-current-elected{box-shadow:inset 4px 0 #4d83b3;padding-left:9px;background:linear-gradient(90deg,#f1f6fc 0,#fff 34%)}
+.definition-banner.partial{border-color:#bfd3ea;background:linear-gradient(135deg,#edf5fc,#fbfdff);box-shadow:0 5px 20px rgba(36,95,145,.06)}
+.definition-banner.partial .definition-icon{background:#3d78a8}
+.definition-banner.partial .definition-copy>span{color:#245f91}
+.definition-banner.partial .definition-copy>p{color:#526b7d}
+.definition-chip.current-elected{background:#e3eef9;color:#245f91}
+.status-pending code,.method-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
