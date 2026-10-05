@@ -18,11 +18,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          files=(uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js ask-core.js ask-answers.js ask-runtime.js)
+          files=(uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js ask-core.js ask-answers.js ask-ai.js ask-runtime.js)
           for f in "${files[@]}"; do
             curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/$f" -o "/tmp/$f"
           done
-          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/ask-core.js /tmp/ask-answers.js /tmp/ask-runtime.js > /tmp/all.js
+          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/ask-core.js /tmp/ask-answers.js /tmp/ask-ai.js /tmp/ask-runtime.js > /tmp/all.js
           node -e "new Function(require('fs').readFileSync('/tmp/all.js','utf8')); console.log('syntax-ok')"
 
       - name: Aguardar GitHub Pages
@@ -33,7 +33,7 @@ jobs:
           for i in $(seq 1 40); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
             if curl -fsSL --max-time 20 "$url" -o /tmp/pages-index; then
-              if grep -q 'content="20261005-askdata-2"' /tmp/pages-index; then
+              if grep -q 'content="20261005-askai-1"' /tmp/pages-index; then
                 ok=1
                 break
               fi
@@ -53,6 +53,19 @@ jobs:
           grep -q 'id="askSuggestions"' /tmp/home
           grep -q 'Pergunte aos dados' /tmp/home
           grep -q 'O que você quer saber' /tmp/home
+          grep -q 'https://js.puter.com/v2/' /tmp/home
+          grep -q 'ask-ai.js?v=20261005-askai-1' /tmp/home
+
+      - name: Validar camada de IA sem segredo
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/ask-ai.js" -o /tmp/ask-ai.js
+          grep -q "puter.ai.chat" /tmp/ask-ai.js
+          grep -q "NÃO produza números" /tmp/ask-ai.js
+          grep -q "A.smartRoute" /tmp/ask-ai.js
+          grep -q "A.enrichWithContext" /tmp/ask-ai.js
+          ! grep -q "sk-" /tmp/ask-ai.js
 
       - name: Testar pergunta de eleitos
         shell: bash

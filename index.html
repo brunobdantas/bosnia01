@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="build" content="20261005-askdata-2">
-<meta name="description" content="Apuração das Eleições 2026 com dados oficiais do TSE, atualização automática e navegação por cargo e UF.">
-<title>Apuração 2026 • Resultados</title>
+<meta name="build" content="20261005-askai-1">
+<meta name="description" content="Eleição 360: pergunte em linguagem natural sobre os resultados das Eleições 2026. IA para interpretar a pergunta; números calculados com dados oficiais do TSE.">
+<title>Eleição 360 • Pergunte aos dados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
+<link rel="preconnect" href="https://js.puter.com" crossorigin>
 <link rel="stylesheet" href="uol.css?v=20261005-historyscope-1">
-<link rel="stylesheet" href="ask.css?v=20261005-askdata-2">
+<link rel="stylesheet" href="ask.css?v=20261005-askai-1">
 </head>
 <body>
 <header class="site-header">
@@ -58,7 +59,7 @@
       <section class="ask-welcome" id="askWelcome">
         <div class="ask-mark">26</div>
         <h1>O que você quer saber<br>sobre as Eleições 2026?</h1>
-        <p>Pergunte em linguagem natural. As respostas são calculadas diretamente a partir dos dados oficiais do TSE.</p>
+        <p>Pergunte em linguagem natural. A IA entende a intenção; votos, cadeiras e situações são calculados exclusivamente a partir dos dados oficiais do TSE.</p>
 
         <div class="ask-suggestions" id="askSuggestions">
           <button type="button">Quem foi eleito deputado estadual em MG?</button>
@@ -74,7 +75,7 @@
         <textarea id="askInput" rows="1" maxlength="500" placeholder="Pergunte qualquer coisa sobre os resultados…" aria-label="Pergunte aos dados das Eleições 2026"></textarea>
         <button id="askSend" type="submit" aria-label="Enviar pergunta">↑</button>
       </form>
-      <p>Respostas factuais com dados do TSE. O sistema não faz previsão de resultado nem ranking político.</p>
+      <p>IA para entender a pergunta; TSE como fonte dos fatos. Sem previsão de resultado ou ranking político.</p>
     </div>
   </section>
 </main>
@@ -273,9 +274,11 @@
 <script src="uol-ui-1.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-ui-2.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-ui-3.js?v=20261005-historyscope-1" defer></script>
-<script src="ask-core.js?v=20261005-askdata-2" defer></script>
-<script src="ask-answers.js?v=20261005-askdata-2" defer></script>
-<script src="ask-runtime.js?v=20261005-askdata-2" defer></script>
+<script src="https://js.puter.com/v2/" defer></script>
+<script src="ask-core.js?v=20261005-askai-1" defer></script>
+<script src="ask-answers.js?v=20261005-askai-1" defer></script>
+<script src="ask-ai.js?v=20261005-askai-1" defer></script>
+<script src="ask-runtime.js?v=20261005-askai-1" defer></script>
 <script src="uol-runtime.js?v=20261005-historyscope-1" defer></script>
 </body>
 </html>

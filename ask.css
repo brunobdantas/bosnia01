@@ -17,3 +17,7 @@ body.explorer-open>.site-header,body.explorer-open>.race-nav-wrap,body.explorer-
 @media(max-width:900px){#experienceApp{grid-template-columns:1fr}.ask-sidebar{display:none}.ask-mobile-brand{display:flex;align-items:center;gap:7px;margin-right:auto}.ask-mobile-brand strong{font-size:.74rem}.ask-source{display:none}.ask-thread{padding-inline:13px}.ask-composer-wrap{padding-inline:12px}}
 @media(max-width:680px){.ask-topbar{min-height:52px;padding:7px 10px}.ask-welcome{margin-top:52px}.ask-welcome h1{font-size:2.2rem}.ask-welcome>p{font-size:.8rem}.ask-suggestions{grid-template-columns:1fr}.ask-suggestions button{min-height:49px}.ask-message{grid-template-columns:28px 1fr;gap:9px;padding:17px 0}.ask-avatar{width:27px;height:27px}.ask-message-user .ask-bubble>p{max-width:92%;font-size:.8rem}.ask-candidate-grid,.ask-party-list{grid-template-columns:1fr}.ask-metrics{grid-template-columns:1fr 1fr}.ask-composer textarea{font-size:16px}}
 @media(prefers-reduced-motion:reduce){.ask-thinking i{animation:none}}
+
+.ask-ai-note{margin-top:12px;padding:8px 10px;border:1px solid #d9ebe6;border-radius:9px;background:#f2faf7;color:#35675b;font-size:.57rem;line-height:1.4}
+html[data-ai-provider="puter"] .ask-source i{background:#22a06b;box-shadow:0 0 0 3px #e8f6ef}
+html[data-ai-provider="fallback"] .ask-source i{background:#9ca3af;box-shadow:0 0 0 3px #f1f3f5}
