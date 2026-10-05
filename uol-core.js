@@ -120,7 +120,12 @@ function statusMeta(c){
     if(normalized.startsWith('eleito'))return{key:'elected',label:raw,icon:'✓'};
     return{key:'defined',label:raw,icon:'•'};
   }
-  if(String(c?.e||'').toLowerCase()==='s')return{key:'defined',label:'Situação definida',icon:'•'};
+  if(String(c?.e||'').toLowerCase()==='s'){
+    const md=String(data?.md||'').trim().toLowerCase();
+    if(md==='e')return{key:'elected',label:'Eleito • definição matemática',icon:'✓'};
+    if(md==='s')return{key:'runoff',label:'2º turno • definição matemática',icon:'2º'};
+    return{key:'defined',label:'Situação definida',icon:'•'};
+  }
   return null;
 }
 function officialStatus(c){return statusMeta(c)?.label||''}

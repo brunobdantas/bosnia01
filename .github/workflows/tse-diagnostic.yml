@@ -28,29 +28,6 @@ jobs:
           console.log(JSON.stringify({idg:j.idg,sections:j.s?.pstn,candidates:count}));
           NODE
 
-      - name: Inspecionar situação oficial no DF
-        shell: bash
-        run: |
-          set -euo pipefail
-          for spec in "governador 0003" "senado 0005" "camara 0006" "assembleia 0008"; do
-            set -- $spec
-            label="$1"
-            cargo="$2"
-            u="https://resultados.tse.jus.br/oficial/ele2026/6259/dados/df/df-c${cargo}-e006259-u.json"
-            echo "==== $label"
-            curl -sS --max-time 20 "$u" -o /tmp/status.json
-            node - "$label" <<'NODE'
-          const fs=require('fs');
-          const label=process.argv[2];
-          const j=JSON.parse(fs.readFileSync('/tmp/status.json','utf8'));
-          const rows=[];
-          for(const cargo of j.carg||[])for(const agr of cargo.agr||[])for(const par of agr.par||[])for(const c of par.cand||[]){
-            rows.push({n:c.n,nmu:c.nmu,e:c.e,st:c.st,vap:c.vap});
-          }
-          console.log(JSON.stringify({label,tf:j.tf,md:j.md,esae:j.esae,sections:j.s?.pstn,statuses:rows.slice(0,30)}));
-          NODE
-          done
-
       - name: Aguardar versão publicada
         shell: bash
         run: |
@@ -58,7 +35,7 @@ jobs:
           ok=0
           for i in $(seq 1 36); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-statusfix-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-statusfix-2"'; then
               ok=1
               break
             fi
@@ -97,7 +74,15 @@ jobs:
             if [[ "$url" != *"cargo=presidente"* ]]; then
               grep -q 'class="status-badge ' /tmp/dom
               grep -q 'id="statusFilter"' /tmp/dom
+            fi
+            if [[ "$url" == *"cargo=governador"* ]]; then
+              grep -q 'value="runoff"' /tmp/dom
+            fi
+            if [[ "$url" == *"cargo=senado"* || "$url" == *"cargo=camara"* || "$url" == *"cargo=assembleia"* ]]; then
               grep -q 'value="elected"' /tmp/dom
+            fi
+            if [[ "$url" == *"cargo=camara"* || "$url" == *"cargo=assembleia"* ]]; then
+              grep -q 'value="alternate"' /tmp/dom
             fi
           done
           echo "Smoke test dos cinco cargos aprovado."
