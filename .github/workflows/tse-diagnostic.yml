@@ -1,37 +1,38 @@
-name: Smoke test Eleição 360 limpa
+name: Smoke test Pergunte aos Dados
 
 on:
   push:
     paths:
       - "index.html"
+      - "ask-*.js"
+      - "ask.css"
       - "uol-*.js"
       - "uol.css"
-      - "experience.js"
-      - "experience.css"
       - ".github/workflows/tse-diagnostic.yml"
 
 jobs:
   smoke:
     runs-on: ubuntu-latest
     steps:
-      - name: Validar sintaxe
+      - name: Validar sintaxe dos módulos
         shell: bash
         run: |
           set -euo pipefail
-          for f in uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js experience.js; do
+          files=(uol-core.js uol-ui-1.js uol-ui-2.js uol-ui-3.js uol-runtime.js ask-core.js ask-answers.js ask-runtime.js)
+          for f in "${files[@]}"; do
             curl -fsSL "https://raw.githubusercontent.com/brunobdantas/bosnia01/${GITHUB_SHA}/$f" -o "/tmp/$f"
           done
-          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/experience.js > /tmp/all.js
+          cat /tmp/uol-core.js /tmp/uol-ui-1.js /tmp/uol-ui-2.js /tmp/uol-ui-3.js /tmp/uol-runtime.js /tmp/ask-core.js /tmp/ask-answers.js /tmp/ask-runtime.js > /tmp/all.js
           node -e "new Function(require('fs').readFileSync('/tmp/all.js','utf8')); console.log('syntax-ok')"
 
-      - name: Aguardar publicação
+      - name: Aguardar GitHub Pages
         shell: bash
         run: |
           set -euo pipefail
           ok=0
           for i in $(seq 1 40); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-clean-1"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-askdata-1"'; then
               ok=1
               break
             fi
@@ -39,28 +40,62 @@ jobs:
           done
           test "$ok" = "1"
 
-      - name: Validar home limpa em Chrome real
+      - name: Validar home conversacional
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=8000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}" > /tmp/home 2> /tmp/home.log || true
+          ! grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/home.log
+          grep -q 'id="askInput"' /tmp/home
+          grep -q 'id="askSuggestions"' /tmp/home
+          grep -q 'Pergunte aos dados' /tmp/home
+          grep -q 'O que você quer saber' /tmp/home
+
+      - name: Testar pergunta de eleitos
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           ok=0
+          q='Quem%20foi%20eleito%20deputado%20distrital%20no%20DF%3F'
           for i in $(seq 1 5); do
-            rm -f /tmp/dom /tmp/chrome.log
-            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=18000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i" > /tmp/dom 2> /tmp/chrome.log || true
-
-            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log; then
-              exit 1
-            fi
-
-            races="$(grep -o 'class="e360-race-row"' /tmp/dom | wc -l | tr -d ' ')"
-            seats="$(grep -o 'class="e360-seat-card"' /tmp/dom | wc -l | tr -d ' ')"
-
-            if grep -q 'id="expHeroProgress"' /tmp/dom               && ! grep -q 'id="expHeroProgress">—' /tmp/dom               && test "$races" = "4"               && test "$seats" = "2"               && grep -q 'class="e360-segment"' /tmp/dom               && grep -q 'id="expOpenExplorer"' /tmp/dom               && grep -q 'id="expShareButton"' /tmp/dom               && ! grep -q 'PASSAPORTE ELEITORAL' /tmp/dom               && ! grep -q 'Modo TV' /tmp/dom               && ! grep -q 'DESCUBRA A ELEIÇÃO' /tmp/dom; then
-              ok=1
-              break
-            fi
-            sleep 5
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/elected 2> /tmp/elected.log || true
+            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/elected.log; then exit 1; fi
+            if grep -q 'Deputado Distrital' /tmp/elected               && grep -q 'class="ask-candidate-card"' /tmp/elected               && grep -q 'Fonte: TSE' /tmp/elected; then ok=1; break; fi
+            sleep 4
           done
           test "$ok" = "1"
-          echo "Smoke da home limpa aprovado."
+
+      - name: Testar composição de cadeiras
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          ok=0
+          q='Como%20ficou%20a%20composicao%20da%20Camara%20no%20DF%3F'
+          for i in $(seq 1 5); do
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/seats 2> /tmp/seats.log || true
+            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/seats.log; then exit 1; fi
+            if grep -q 'class="ask-seat-bar"' /tmp/seats               && grep -q 'class="ask-party-list"' /tmp/seats               && grep -q 'Fonte: TSE' /tmp/seats; then ok=1; break; fi
+            sleep 4
+          done
+          test "$ok" = "1"
+
+      - name: Testar comparação entre UFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          ok=0
+          q='Compare%20brancos%20e%20nulos%20entre%20DF%20e%20GO'
+          for i in $(seq 1 5); do
+            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=16000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?q=$q&smoke=${GITHUB_SHA}-$i" > /tmp/compare 2> /tmp/compare.log || true
+            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/compare.log; then exit 1; fi
+            if grep -q 'class="ask-table-wrap"' /tmp/compare               && grep -q '>DF<' /tmp/compare               && grep -q '>GO<' /tmp/compare; then ok=1; break; fi
+            sleep 4
+          done
+          test "$ok" = "1"
+
+      - name: Smoke aprovado
+        run: echo "Pergunte aos Dados aprovado em Chrome real."

@@ -4,19 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="build" content="20261005-clean-1">
+<meta name="build" content="20261005-askdata-1">
 <meta name="description" content="Apuração das Eleições 2026 com dados oficiais do TSE, atualização automática e navegação por cargo e UF.">
 <title>Apuração 2026 • Resultados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
 <link rel="stylesheet" href="uol.css?v=20261005-historyscope-1">
-<link rel="stylesheet" href="experience.css?v=20261005-clean-1">
+<link rel="stylesheet" href="ask.css?v=20261005-askdata-1">
 </head>
 <body>
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" id="experienceBrand" href="./" aria-label="Eleição 360">
       <span class="brand-badge">26</span>
-      <span><strong>Eleição 360</strong><small>explore as Eleições 2026</small></span>
+      <span><strong>Eleição 360</strong><small>Pergunte aos dados</small></span>
     </a>
     <div class="live-status">
       <div class="live-pill" id="sourcePill"><i></i><span id="sourceStatus">Conectando…</span></div>
@@ -28,77 +28,58 @@
   </div>
 </header>
 
-<main id="experienceApp" aria-label="Eleição 360">
-  <div class="e360-loading" id="expLoading">Carregando dados oficiais…</div>
+<main id="experienceApp" class="ask-app" aria-label="Eleição 360 • Pergunte aos dados">
+  <aside class="ask-sidebar" aria-label="Navegação">
+    <div class="ask-side-brand">
+      <span class="ask-logo">26</span>
+      <div><strong>Eleição 360</strong><small>Pergunte aos dados</small></div>
+    </div>
 
-  <div id="experienceContent" hidden>
-    <section class="e360-summary" id="expHero">
-      <div class="e360-summary-copy">
-        <p class="e360-eyebrow">ELEIÇÕES 2026 • DADOS OFICIAIS DO TSE</p>
-        <h1>Resultados, sem ruído.</h1>
-        <p>Brasil, sua UF e a composição das cadeiras em uma leitura direta.</p>
-        <div class="e360-actions">
-          <button class="e360-primary" id="expOpenExplorer" type="button">Abrir Explorer</button>
-          <button class="e360-secondary" id="expShareButton" type="button">Compartilhar</button>
+    <button class="ask-new" id="askNewChat" type="button"><span>＋</span> Nova análise</button>
+
+    <div class="ask-side-section">
+      <span>Consultas recentes</span>
+      <div id="askRecent"></div>
+    </div>
+
+    <button class="ask-explorer" id="askOpenExplorer" type="button">
+      <span>◫</span><div><strong>Explorer de dados</strong><small>Filtros e detalhes completos</small></div>
+    </button>
+  </aside>
+
+  <section class="ask-main">
+    <header class="ask-topbar">
+      <div class="ask-mobile-brand"><span class="ask-logo">26</span><strong>Eleição 360</strong></div>
+      <div class="ask-source"><i></i><span id="askSourceStatus">Dados oficiais do TSE</span></div>
+      <button id="askTopExplorer" type="button">Explorer</button>
+    </header>
+
+    <div class="ask-thread" id="askThread" aria-live="polite">
+      <section class="ask-welcome" id="askWelcome">
+        <div class="ask-mark">26</div>
+        <h1>O que você quer saber<br>sobre as Eleições 2026?</h1>
+        <p>Pergunte em linguagem natural. As respostas são calculadas diretamente a partir dos dados oficiais do TSE.</p>
+
+        <div class="ask-suggestions" id="askSuggestions">
+          <button type="button">Quem foi eleito deputado estadual em MG?</button>
+          <button type="button">Como ficou a composição da Câmara no DF?</button>
+          <button type="button">Compare brancos e nulos entre DF e GO</button>
+          <button type="button">Quais estados ainda não terminaram a totalização?</button>
         </div>
-      </div>
+      </section>
+    </div>
 
-      <div class="e360-progress">
-        <span>BRASIL</span>
-        <strong id="expHeroProgress">—</strong>
-        <small>das seções totalizadas</small>
-        <div><i id="expHeroProgressBar"></i></div>
-        <em id="expHeroStamp">Conectando ao TSE…</em>
-      </div>
-    </section>
-
-    <section class="e360-national">
-      <button type="button" id="expPresidentOpen">
-        <div>
-          <span>Presidência</span>
-          <strong id="expPresidentStatus">Resultado nacional</strong>
-          <small id="expPresidentMeta">Carregando…</small>
-        </div>
-        <i>›</i>
-      </button>
-
-      <div class="e360-national-stats">
-        <div><span>Válidos</span><strong id="expStatValid">—</strong></div>
-        <div><span>Brancos</span><strong id="expStatBlank">—</strong></div>
-        <div><span>Nulos</span><strong id="expStatNull">—</strong></div>
-      </div>
-    </section>
-
-    <section class="e360-state" id="expStateSection">
-      <header>
-        <div>
-          <p class="e360-eyebrow">SUA UF</p>
-          <h2 id="expStateName">DF • Distrito Federal</h2>
-        </div>
-        <select id="expStateSelect" aria-label="Escolher estado"></select>
-      </header>
-
-      <div class="e360-race-list" id="expStateCards"></div>
-    </section>
-
-    <section class="e360-seats" id="expSeatsSection">
-      <header>
-        <div>
-          <p class="e360-eyebrow">CADEIRAS</p>
-          <h2 id="expSeatsTitle">Composição no DF</h2>
-        </div>
-      </header>
-
-      <div class="e360-seat-bars">
-        <button type="button" class="e360-seat-card" id="expFederalSeats"></button>
-        <button type="button" class="e360-seat-card" id="expStateSeats"></button>
-      </div>
-      <p class="e360-seat-note" id="expSeatNote"></p>
-    </section>
-  </div>
+    <div class="ask-composer-wrap">
+      <form class="ask-composer" id="askForm">
+        <textarea id="askInput" rows="1" maxlength="500" placeholder="Pergunte qualquer coisa sobre os resultados…" aria-label="Pergunte aos dados das Eleições 2026"></textarea>
+        <button id="askSend" type="submit" aria-label="Enviar pergunta">↑</button>
+      </form>
+      <p>Respostas factuais com dados do TSE. O sistema não faz previsão de resultado nem ranking político.</p>
+    </div>
+  </section>
 </main>
 
-<div class="e360-toast" id="expToast" hidden></div>
+<div class="ask-toast" id="askToast" hidden></div>
 
 <nav class="race-nav-wrap" aria-label="Cargos em disputa">
   <div class="race-nav" id="raceTabs">
@@ -293,6 +274,8 @@
 <script src="uol-ui-2.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-ui-3.js?v=20261005-historyscope-1" defer></script>
 <script src="uol-runtime.js?v=20261005-historyscope-1" defer></script>
-<script src="experience.js?v=20261005-clean-1" defer></script>
+<script src="ask-core.js?v=20261005-askdata-1" defer></script>
+<script src="ask-answers.js?v=20261005-askdata-1" defer></script>
+<script src="ask-runtime.js?v=20261005-askdata-1" defer></script>
 </body>
 </html>
