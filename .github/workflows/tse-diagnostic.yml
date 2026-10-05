@@ -67,7 +67,13 @@ jobs:
             if grep -q 'Deputado Distrital' /tmp/elected               && grep -q 'class="ask-candidate-card"' /tmp/elected               && grep -q 'Fonte: TSE' /tmp/elected; then ok=1; break; fi
             sleep 4
           done
-          test "$ok" = "1"
+          if [ "$ok" != "1" ]; then
+            echo "---- resposta renderizada ----"
+            grep -E 'Deputado|Fonte: TSE|ask-candidate-card|não publicou|indisponível|Qual cargo|situação final|fotografia das vagas' /tmp/elected | head -n 80 || true
+            echo "---- console ----"
+            tail -n 100 /tmp/elected.log || true
+            exit 1
+          fi
 
       - name: Testar composição de cadeiras
         shell: bash
