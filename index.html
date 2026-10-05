@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#ffffff">
-<meta name="build" content="20261005-chartfix-1">
+<meta name="build" content="20261005-timeaxis-1">
 <meta name="description" content="Apuração das Eleições 2026 com dados oficiais do TSE, atualização automática e navegação por cargo e UF.">
 <title>Apuração 2026 • Resultados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
-<link rel="stylesheet" href="uol.css?v=20261005-chartfix-1">
+<link rel="stylesheet" href="uol.css?v=20261005-timeaxis-1">
 </head>
 <body>
 <header class="site-header">
@@ -169,7 +169,7 @@
     <div class="comparison-cards" id="comparisonCards"></div>
     <div class="comparison-chart" id="comparisonChartWrap" hidden>
       <div class="chart-head">
-        <div><strong>Evolução observada</strong><span>participação × avanço das seções</span></div>
+        <div><strong>Evolução observada</strong><span>participação × horário oficial do TSE</span></div>
         <div class="chart-legend" id="comparisonLegend"></div>
       </div>
       <svg id="comparisonChart" viewBox="0 0 1000 300" role="img" aria-label="Evolução das candidaturas comparadas"></svg>
@@ -181,7 +181,7 @@
       <div><p class="kicker">EVOLUÇÃO OBSERVADA</p><h2 id="historyTitle">Candidatura selecionada</h2></div>
       <span id="historyPoints">0 cargas</span>
     </div>
-    <p>O histórico é formado apenas por cargas oficiais distintas observadas neste navegador; não há extrapolação.</p>
+    <p>O histórico usa cargas oficiais distintas observadas neste navegador. O eixo horizontal usa a hora da totalização do TSE; se necessário, usa a hora de geração do arquivo. O percentual de seções permanece disponível em cada ponto.</p>
     <svg id="historyChart" viewBox="0 0 1000 280" role="img" aria-label="Evolução histórica observada"></svg>
   </section>
 
@@ -215,10 +215,10 @@
   <a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial do TSE</a>
 </footer>
 
-<script src="uol-core.js?v=20261005-chartfix-1" defer></script>
-<script src="uol-ui-1.js?v=20261005-chartfix-1" defer></script>
-<script src="uol-ui-2.js?v=20261005-chartfix-1" defer></script>
-<script src="uol-ui-3.js?v=20261005-chartfix-1" defer></script>
-<script src="uol-runtime.js?v=20261005-chartfix-1" defer></script>
+<script src="uol-core.js?v=20261005-timeaxis-1" defer></script>
+<script src="uol-ui-1.js?v=20261005-timeaxis-1" defer></script>
+<script src="uol-ui-2.js?v=20261005-timeaxis-1" defer></script>
+<script src="uol-ui-3.js?v=20261005-timeaxis-1" defer></script>
+<script src="uol-runtime.js?v=20261005-timeaxis-1" defer></script>
 </body>
 </html>

@@ -197,6 +197,28 @@ async function fetchJson(url,key,timeoutMs=7500){
     throw error;
   }finally{clearTimeout(to)}
 }
+function parseTseDateTime(dateValue,timeValue){
+  const d=String(dateValue||'').trim(),t=String(timeValue||'').trim();
+  const m=d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const h=t.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+  if(!m||!h)return NaN;
+  return Date.UTC(Number(m[3]),Number(m[2])-1,Number(m[1]),Number(h[1]),Number(h[2]),Number(h[3]));
+}
+function parseTseDateTimeLabel(label){
+  const m=String(label||'').match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2}:\d{2})/);
+  return m?parseTseDateTime(m[1],m[2]):NaN;
+}
+function snapshotSourceTime(x){
+  const stored=num(x?.sourceTs,NaN);
+  if(Number.isFinite(stored)&&stored>0)return stored;
+  const totalized=parseTseDateTime(x?.dt,x?.ht);
+  if(Number.isFinite(totalized))return totalized;
+  const generated=parseTseDateTime(x?.dg,x?.hg);
+  if(Number.isFinite(generated))return generated;
+  const fromLabel=parseTseDateTimeLabel(x?.label);
+  if(Number.isFinite(fromLabel))return fromLabel;
+  return num(x?.ts,NaN);
+}
 function snapshotHistory(){
   try{return JSON.parse(localStorage.getItem(historyKey())||'[]')}catch{return[]}
 }
@@ -206,7 +228,24 @@ function saveSnapshot(j){
   for(const c of flattenCandidates(j))map[String(c.sqcand)]={votes:num(c.vap),share:candidateShare(c,j),number:String(c.n||'')};
   const h=snapshotHistory();
   if(h.some(x=>x.key===key))return false;
-  h.push({key,ts:Date.now(),label:[j?.dg,j?.hg].filter(Boolean).join(' '),sections:pct(j?.s?.pstn??j?.s?.pst),c:map});
+  const totalizedTs=parseTseDateTime(j?.dt,j?.ht);
+  const generatedTs=parseTseDateTime(j?.dg,j?.hg);
+  const sourceTs=Number.isFinite(totalizedTs)?totalizedTs:(Number.isFinite(generatedTs)?generatedTs:Date.now());
+  h.push({
+    key,
+    ts:Date.now(),
+    sourceTs,
+    totalizedTs:Number.isFinite(totalizedTs)?totalizedTs:null,
+    generatedTs:Number.isFinite(generatedTs)?generatedTs:null,
+    dt:j?.dt||'',
+    ht:j?.ht||'',
+    dg:j?.dg||'',
+    hg:j?.hg||'',
+    label:[j?.dt,j?.ht].filter(Boolean).join(' ')||[j?.dg,j?.hg].filter(Boolean).join(' '),
+    generatedLabel:[j?.dg,j?.hg].filter(Boolean).join(' '),
+    sections:pct(j?.s?.pstn??j?.s?.pst),
+    c:map
+  });
   while(h.length>180)h.shift();
   try{localStorage.setItem(historyKey(),JSON.stringify(h))}catch{}
   return true;
@@ -216,7 +255,17 @@ function historyFor(c){
   const id=String(c.sqcand),n=String(c.n||'');
   return snapshotHistory().map(x=>{
     const v=x.c?.[id]||Object.values(x.c||{}).find(z=>String(z.number)===n);
-    return v?{...x,cv:v.votes,share:v.share}:null;
+    const inferred=snapshotSourceTime(x);
+    const inferredGenerated=Number.isFinite(num(x?.generatedTs,NaN))?num(x.generatedTs):parseTseDateTimeLabel(x?.generatedLabel||x?.label);
+    const inferredTotalized=Number.isFinite(num(x?.totalizedTs,NaN))?num(x.totalizedTs):parseTseDateTime(x?.dt,x?.ht);
+    return v?{
+      ...x,
+      sourceTs:inferred,
+      totalizedTs:Number.isFinite(inferredTotalized)?inferredTotalized:null,
+      generatedTs:Number.isFinite(inferredGenerated)?inferredGenerated:null,
+      cv:v.votes,
+      share:v.share
+    }:null;
   }).filter(Boolean);
 }
 function loadCompared(){
