@@ -1,37 +1,48 @@
 # bosnia01 — Apuração 2026
 
-Painel web estático para acompanhar a apuração presidencial de 2026 usando os arquivos JSON oficiais do Tribunal Superior Eleitoral (TSE).
+Portal web para acompanhar a apuração das Eleições Gerais de 2026 com dados oficiais do Tribunal Superior Eleitoral (TSE).
 
-## Objetivo
+## Experiência
 
-Apresentar uma leitura estritamente matemática da condição de maioria absoluta no primeiro turno. O portal não produz previsão eleitoral, probabilidade de vitória, tendência ou recomendação política.
+A navegação foi desenhada com uma hierarquia editorial de apuração:
+
+- abas fixas para Presidente, Governador, Senado, Câmara e Assembleia/Câmara Legislativa;
+- escolha de Brasil ou UF em um único controle de localidade;
+- percentual de seções totalizadas e última carga oficial em destaque;
+- candidaturas apresentadas com foto oficial, número, partido, votos e participação;
+- lista em ordem de número de urna, sem ranking editorial por desempenho;
+- ação “Todos os candidatos” para expandir disputas;
+- resumo de votos brancos, nulos e válidos;
+- nos cargos proporcionais: busca por candidatura, filtro por partido e filtro por situação oficial;
+- resumos dos demais cargos para troca rápida de contexto;
+- comparação simultânea de até quatro candidaturas do mesmo cargo e localidade;
+- histórico carga a carga observado no navegador;
+- matemática derivada exclusivamente da apuração efetivamente divulgada, sem probabilidades ou previsão do resultado.
+
+## Cargos
+
+- Presidente — código 0001 / eleição federal 6257
+- Governador — código 0003 / eleição estadual 6259
+- Senador — código 0005 / eleição estadual 6259
+- Deputado Federal — código 0006 / eleição estadual 6259
+- Deputado Estadual — código 0007 / eleição estadual 6259
+- Deputado Distrital — código 0008 no Distrito Federal / eleição estadual 6259
+
+## Atualização
+
+O contexto aberto é consultado automaticamente em alta frequência. Quando a aba fica em segundo plano, o polling é pausado; em falhas consecutivas é aplicado backoff temporário.
+
+Os resumos dos outros cargos usam uma cadência separada e mais lenta. Isso reduz requisições desnecessárias ao TSE e mantém a navegação responsiva.
 
 ## Fonte oficial
 
 - Pleito: 3220 — 1º turno, 04/10/2026
-- Eleição federal: 6257
-- Cargo: Presidente (0001)
-- EA20 nacional: `https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json`
-- Documentação técnica: `https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados`
+- Eleição Geral Federal: 6257
+- Eleições Gerais Estaduais: 6259
+- Documentação técnica: https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados
 
-## O que o painel mostra
-
-- atualização automática dos resultados oficiais;
-- seletor de candidatura com o mesmo critério matemático para todas;
-- percentual sobre votos válidos já apurados;
-- seções totalizadas, votos válidos e votos da candidatura selecionada;
-- distância para a maioria dos votos válidos já apurados;
-- envelope matemático usando o eleitorado de seções ainda não totalizadas como teto absoluto de novos votos;
-- simulador de cenários hipotéticos sem extrapolação estatística;
-- leitura por UF em ordem alfabética;
-- cache local da última leitura para falhas temporárias.
+O portal é independente e não possui vínculo institucional com o TSE.
 
 ## GitHub Pages
 
-O repositório inclui `.github/workflows/pages.yml`.
-
-Se a primeira execução do workflow informar que o Pages ainda não está configurado, abra:
-
-**Settings → Pages → Build and deployment → Source → GitHub Actions**
-
-Depois disso, cada push em `main` publica automaticamente o portal.
+O repositório inclui `.github/workflows/pages.yml`. Cada push em `main` publica automaticamente a versão estática no GitHub Pages.
