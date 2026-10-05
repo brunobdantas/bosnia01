@@ -122,9 +122,13 @@ function statusMeta(c){
   }
   if(String(c?.e||'').toLowerCase()==='s'){
     const md=String(data?.md||'').trim().toLowerCase();
-    if(md==='e')return{key:'elected',label:'Eleito • definição matemática',icon:'✓'};
-    if(md==='s')return{key:'runoff',label:'2º turno • definição matemática',icon:'2º'};
-    return{key:'defined',label:'Situação definida',icon:'•'};
+    const final=String(data?.tf||'').trim().toLowerCase()==='s';
+    if(office().majority){
+      if(md==='e')return{key:'elected',label:'Eleito • definição matemática TSE',icon:'✓',early:!final};
+      if(md==='s')return{key:'runoff',label:'2º turno • definição matemática TSE',icon:'2º',early:!final};
+      return{key:'defined',label:'Situação definida pelo TSE',icon:'•',early:!final};
+    }
+    return{key:'elected',label:'Eleito • TSE',icon:'✓',early:!final};
   }
   return null;
 }

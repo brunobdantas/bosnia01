@@ -11,6 +11,6 @@ function closeStateModal(){$('stateModal').hidden=true}
 function renderAll(stale=false){
   if(!data||!selected)return;
   const m=metrics(data,selected);
-  renderTabs();renderHeaders();renderFilters();renderCandidates();renderVoteSummary(m);renderLoadMeta(m);renderMath(m);renderComparison();renderHistory();
+  renderTabs();renderHeaders();renderFilters();renderCandidates();renderDefinitionBanner();renderVoteSummary(m);renderLoadMeta(m);renderMath(m);renderComparison();renderHistory();
   if(stale)$('lastUpdate').textContent+=' • cache local';
 }

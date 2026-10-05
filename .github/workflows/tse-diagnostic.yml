@@ -35,7 +35,7 @@ jobs:
           ok=0
           for i in $(seq 1 36); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-statusfix-2"'; then
+            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-definition-1"'; then
               ok=1
               break
             fi
@@ -77,9 +77,12 @@ jobs:
             fi
             if [[ "$url" == *"cargo=governador"* ]]; then
               grep -q 'value="runoff"' /tmp/dom
+              grep -q 'id="definitionBanner"' /tmp/dom
             fi
             if [[ "$url" == *"cargo=senado"* || "$url" == *"cargo=camara"* || "$url" == *"cargo=assembleia"* ]]; then
               grep -q 'value="elected"' /tmp/dom
+              grep -q 'id="definitionBanner"' /tmp/dom
+              grep -q 'status-badge elected' /tmp/dom
             fi
             if [[ "$url" == *"cargo=camara"* || "$url" == *"cargo=assembleia"* ]]; then
               grep -q 'value="alternate"' /tmp/dom

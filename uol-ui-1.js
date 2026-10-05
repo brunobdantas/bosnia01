@@ -154,3 +154,59 @@ function renderMath(m){
     $('mathMin').textContent=`${fp.format(x.min)}%`;$('mathMid').textContent=`agora ${fp.format(m.candidateShare)}%`;$('mathMax').textContent=`${fp.format(x.max)}%`;
   }
 }
+function renderDefinitionBanner(){
+  const banner=$('definitionBanner');
+  const title=$('definitionTitle');
+  const text=$('definitionText');
+  const chips=$('definitionChips');
+  if(!banner||!data)return;
+
+  const metas=candidates.map(c=>({c,s:statusMeta(c)})).filter(x=>x.s);
+  const elected=metas.filter(x=>x.s.key==='elected');
+  const runoff=metas.filter(x=>x.s.key==='runoff');
+  const tf=String(data?.tf||'').toLowerCase()==='s';
+  const md=String(data?.md||'').toLowerCase();
+
+  chips.innerHTML='';
+  let visible=false;
+
+  if(office().majority&&md==='e'&&elected.length){
+    visible=true;
+    title.textContent='Resultado matematicamente definido pelo TSE';
+    text.textContent=tf
+      ? 'A totalização final já atribuiu o resultado.'
+      : 'O TSE já marcou a eleição como matematicamente definida, mesmo com seções ainda em totalização.';
+    for(const x of elected){
+      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip elected">✓ ${esc(x.c.nmu||x.c.nm||'Candidatura')} • Eleito</span>`);
+    }
+  }else if(office().majority&&md==='s'&&runoff.length){
+    visible=true;
+    title.textContent='Segundo turno matematicamente definido pelo TSE';
+    text.textContent=tf
+      ? 'A totalização final confirmou o segundo turno.'
+      : 'O TSE já informou que haverá 2º turno antes da conclusão de todas as seções.';
+    for(const x of runoff){
+      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip runoff">2º ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
+    }
+  }else if(!office().majority&&elected.some(x=>x.s.early)){
+    visible=true;
+    title.textContent='Eleitos já definidos pelo TSE';
+    text.textContent='O arquivo oficial já marca candidatura(s) como eleita(s), embora a totalização da abrangência ainda não tenha sido finalizada.';
+    for(const x of elected.slice(0,12)){
+      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip elected">✓ ${esc(x.c.nmu||x.c.nm||'Candidatura')}</span>`);
+    }
+    if(elected.length>12){
+      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip more">+${elected.length-12}</span>`);
+    }
+  }else if(tf&&(elected.length||runoff.length)){
+    visible=true;
+    title.textContent='Situação oficial do TSE';
+    text.textContent='A totalização final já atribuiu a situação oficial das candidaturas.';
+    for(const x of [...elected,...runoff].slice(0,12)){
+      chips.insertAdjacentHTML('beforeend',`<span class="definition-chip ${x.s.key}">${x.s.icon} ${esc(x.c.nmu||x.c.nm||'Candidatura')} • ${esc(x.s.label)}</span>`);
+    }
+  }
+
+  banner.hidden=!visible;
+}
+
