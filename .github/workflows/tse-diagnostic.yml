@@ -32,9 +32,11 @@ jobs:
           ok=0
           for i in $(seq 1 40); do
             url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-askdata-1"'; then
-              ok=1
-              break
+            if curl -fsSL --max-time 20 "$url" -o /tmp/pages-index; then
+              if grep -q 'content="20261005-askdata-1"' /tmp/pages-index; then
+                ok=1
+                break
+              fi
             fi
             sleep 5
           done
