@@ -46,12 +46,9 @@ const scopeLabel=(uf=scope)=>uf==='BR'?'Brasil':`${uf} • ${UF[uf]}`;
 
 function resultUrlFor(key,uf){
   const o=OFFICES[key],e=String(o.election).padStart(6,'0');
-  const code=key==='stateDeputy'?(uf==='DF'?'0008':'0007'):o.code;
-  if(key==='president'){
-    const prefix=(uf||'BR').toLowerCase();
-    return `${CFG.base}/${o.election}/dados/br/${prefix}-c${code}-e${e}-u.json`;
-  }
-  const s=(uf||preferredUF).toLowerCase();
+  const targetUf=(uf||(key==='president'?'BR':preferredUF)).toUpperCase();
+  const code=key==='stateDeputy'?(targetUf==='DF'?'0008':'0007'):o.code;
+  const s=targetUf.toLowerCase();
   return `${CFG.base}/${o.election}/dados/${s}/${s}-c${code}-e${e}-u.json`;
 }
 function resultUrl(){return resultUrlFor(officeKey,scope)}
@@ -136,14 +133,14 @@ async function fetchJson(url,key,timeoutMs=7500){
     throw error;
   }finally{clearTimeout(to)}
 }
-function history(){
+function snapshotHistory(){
   try{return JSON.parse(localStorage.getItem(historyKey())||'[]')}catch{return[]}
 }
 function saveSnapshot(j){
   const key=distinctKey(j); if(!key||key===lastDistinctKey)return false; lastDistinctKey=key;
   const map={};
   for(const c of flattenCandidates(j))map[String(c.sqcand)]={votes:num(c.vap),share:candidateShare(c,j),number:String(c.n||'')};
-  const h=history();
+  const h=snapshotHistory();
   if(h.some(x=>x.key===key))return false;
   h.push({key,ts:Date.now(),label:[j?.dg,j?.hg].filter(Boolean).join(' '),sections:pct(j?.s?.pstn??j?.s?.pst),c:map});
   while(h.length>180)h.shift();
@@ -153,7 +150,7 @@ function saveSnapshot(j){
 function historyFor(c){
   if(!c)return[];
   const id=String(c.sqcand),n=String(c.n||'');
-  return history().map(x=>{
+  return snapshotHistory().map(x=>{
     const v=x.c?.[id]||Object.values(x.c||{}).find(z=>String(z.number)===n);
     return v?{...x,cv:v.votes,share:v.share}:null;
   }).filter(Boolean);
