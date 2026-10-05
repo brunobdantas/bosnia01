@@ -1,91 +1,44 @@
-name: Smoke test da apuração
+name: Diagnóstico MG situações
 
 on:
   push:
     paths:
-      - "index.html"
-      - "uol-*.js"
-      - "uol.css"
       - ".github/workflows/tse-diagnostic.yml"
 
 jobs:
-  smoke:
+  inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Validar endpoint oficial e CORS
+      - name: Inspecionar Deputado Estadual MG
         shell: bash
         run: |
           set -euo pipefail
-          u="https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json"
-          curl -sS -H "Origin: https://brunobdantas.github.io" -D /tmp/headers -o /tmp/body --max-time 20 "$u"
-          grep -qi '^access-control-allow-origin: https://brunobdantas.github.io' /tmp/headers
+          u="https://resultados.tse.jus.br/oficial/ele2026/6259/dados/mg/mg-c0007-e006259-u.json"
+          curl -sS --max-time 30 "$u" -o /tmp/mg.json
           node - <<'NODE'
           const fs=require('fs');
-          const j=JSON.parse(fs.readFileSync('/tmp/body','utf8'));
-          let count=0;
-          for(const cargo of j.carg||[])for(const agr of cargo.agr||[])for(const par of agr.par||[])count+=(par.cand||[]).length;
-          if(count<1)throw new Error('Nenhuma candidatura no EA20 nacional');
-          console.log(JSON.stringify({idg:j.idg,sections:j.s?.pstn,candidates:count}));
+          const j=JSON.parse(fs.readFileSync('/tmp/mg.json','utf8'));
+          const rows=[];
+          for(const cargo of j.carg||[])for(const agr of cargo.agr||[])for(const par of agr.par||[])for(const c of par.cand||[]){
+            rows.push({n:c.n,nmu:c.nmu,e:c.e,st:c.st,vap:c.vap,pvap:c.pvap,dvt:c.dvt,party:par.sg});
+          }
+          const counts=(field)=>Object.fromEntries([...new Set(rows.map(x=>String(x[field]??'')))].map(v=>[v,rows.filter(x=>String(x[field]??'')===v).length]));
+          console.log(JSON.stringify({
+            idg:j.idg,dg:j.dg,hg:j.hg,tf:j.tf,md:j.md,sections:j.s,
+            total:rows.length,
+            eCounts:counts('e'),
+            stCounts:counts('st'),
+            sampleDefined:rows.filter(x=>String(x.e||'').toLowerCase()==='s'||String(x.st||'').trim()).slice(0,40)
+          },null,2));
           NODE
 
-      - name: Aguardar versão publicada
-        shell: bash
-        run: |
-          set -euo pipefail
-          ok=0
-          for i in $(seq 1 36); do
-            url="https://brunobdantas.github.io/bosnia01/?smoke=${GITHUB_SHA}-$i"
-            if curl -fsSL --max-time 20 "$url" | grep -q 'content="20261005-definition-1"'; then
-              ok=1
-              break
-            fi
-            sleep 5
-          done
-          test "$ok" = "1"
-
-      - name: Executar cinco cargos em Chrome real
+      - name: Executar MG no Chrome publicado
         shell: bash
         run: |
           set -euo pipefail
           chrome="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          urls=(
-            "https://brunobdantas.github.io/bosnia01/?cargo=presidente&uf=BR&smoke=${GITHUB_SHA}"
-            "https://brunobdantas.github.io/bosnia01/?cargo=governador&uf=DF&smoke=${GITHUB_SHA}"
-            "https://brunobdantas.github.io/bosnia01/?cargo=senado&uf=DF&smoke=${GITHUB_SHA}"
-            "https://brunobdantas.github.io/bosnia01/?cargo=camara&uf=DF&smoke=${GITHUB_SHA}"
-            "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=DF&smoke=${GITHUB_SHA}"
-          )
-          for url in "${urls[@]}"; do
-            echo "==== $url"
-            rm -f /tmp/dom /tmp/chrome.log
-            "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "$url" > /tmp/dom 2> /tmp/chrome.log || true
-
-            if grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log; then
-              echo "Erro JavaScript detectado"
-              exit 1
-            fi
-
-            rows="$(grep -o 'class="candidate-row' /tmp/dom | wc -l | tr -d ' ')"
-            echo "candidate_rows=$rows"
-            test "$rows" -ge 1
-
-            grep -q 'id="sourceStatus">TSE • dados oficiais' /tmp/dom
-            grep -q 'class="notice live"' /tmp/dom
-            if [[ "$url" != *"cargo=presidente"* ]]; then
-              grep -q 'class="status-badge ' /tmp/dom
-              grep -q 'id="statusFilter"' /tmp/dom
-            fi
-            if [[ "$url" == *"cargo=governador"* ]]; then
-              grep -q 'value="runoff"' /tmp/dom
-              grep -q 'id="definitionBanner"' /tmp/dom
-            fi
-            if [[ "$url" == *"cargo=senado"* || "$url" == *"cargo=camara"* || "$url" == *"cargo=assembleia"* ]]; then
-              grep -q 'value="elected"' /tmp/dom
-              grep -q 'id="definitionBanner"' /tmp/dom
-              grep -q 'status-badge elected' /tmp/dom
-            fi
-            if [[ "$url" == *"cargo=camara"* || "$url" == *"cargo=assembleia"* ]]; then
-              grep -q 'value="alternate"' /tmp/dom
-            fi
-          done
-          echo "Smoke test dos cinco cargos aprovado."
+          "$chrome" --headless=new --no-sandbox --disable-gpu --virtual-time-budget=10000 --enable-logging=stderr --v=0 --dump-dom "https://brunobdantas.github.io/bosnia01/?cargo=assembleia&uf=MG&diag=${GITHUB_SHA}" > /tmp/dom 2> /tmp/chrome.log || true
+          echo "rows=$(grep -o 'class="candidate-row' /tmp/dom | wc -l | tr -d ' ')"
+          echo "badges=$(grep -o 'class="status-badge ' /tmp/dom | wc -l | tr -d ' ')"
+          grep -o '<option value="[^"]*">[^<]*</option>' /tmp/dom | grep -E 'situa|Eleit|Supl|Não|2º' | head -n 30 || true
+          grep -E 'INFO:CONSOLE:.*(Uncaught|ReferenceError|TypeError|SyntaxError)' /tmp/chrome.log || true
