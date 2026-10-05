@@ -3,166 +3,207 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#07111c">
-<meta name="description" content="Central visual de acompanhamento da apuração das Eleições 2026 com dados oficiais do TSE.">
-<title>Apuração 2026 • Central visual</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="Apuração das Eleições 2026 com dados oficiais do TSE, atualização automática e navegação por cargo e UF.">
+<title>Apuração 2026 • Resultados</title>
 <link rel="preconnect" href="https://resultados.tse.jus.br" crossorigin>
-<link rel="stylesheet" href="styles.css">
-<link rel="stylesheet" href="visual.css">
-<link rel="stylesheet" href="compare.css">
+<link rel="stylesheet" href="uol.css">
 </head>
 <body>
-<header class="topbar visual-topbar">
-  <a class="brand" href="#inicio"><span class="brand-mark">26</span><span><strong>Apuração 2026</strong><small>Central visual • dados oficiais TSE</small></span></a>
-  <div class="live-cluster">
-    <div class="mini-countdown" title="Próxima consulta automática">
-      <span class="countdown-ring" id="countdownRing"><b id="countdownValue">—</b></span>
-      <span><strong>Próxima leitura</strong><small id="countdownLabel">conectando…</small></span>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="./" aria-label="Apuração 2026">
+      <span class="brand-badge">26</span>
+      <span><strong>Apuração 2026</strong><small>dados oficiais do TSE</small></span>
+    </a>
+    <div class="live-status">
+      <div class="live-pill" id="sourcePill"><i></i><span id="sourceStatus">Conectando…</span></div>
+      <div class="refresh-clock" title="Próxima leitura automática">
+        <span class="refresh-ring" id="countdownRing"><b id="countdownValue">—</b></span>
+        <span><strong>Atualização automática</strong><small id="countdownLabel">conectando</small></span>
+      </div>
     </div>
-    <div class="pill" id="sourcePill" role="status" aria-live="polite"><span class="dot"></span><span id="sourceStatus">Conectando ao TSE…</span></div>
   </div>
 </header>
 
-<main id="inicio" class="shell visual-shell">
-  <section class="visual-hero">
+<nav class="race-nav-wrap" aria-label="Cargos em disputa">
+  <div class="race-nav" id="raceTabs">
+    <button type="button" data-race="president">Presidente</button>
+    <button type="button" data-race="governor">Governador</button>
+    <button type="button" data-race="senator">Senado</button>
+    <button type="button" data-race="federalDeputy">Câmara</button>
+    <button type="button" data-race="stateDeputy">Assembleia</button>
+  </div>
+</nav>
+
+<main class="page">
+  <section class="page-title-row">
     <div>
-      <p class="eyebrow">ELEIÇÕES GERAIS 2026 • 1º TURNO</p>
-      <h1>A eleição em uma tela.</h1>
-      <p class="lead">Acompanhe o avanço da totalização, navegue por cargo e UF e abra o detalhe de qualquer candidatura sem sair da leitura visual da apuração.</p>
+      <p class="kicker">ELEIÇÕES 2026 • 1º TURNO</p>
+      <h1>Apuração das eleições</h1>
     </div>
-    <article class="hero-progress card">
-      <div class="big-ring" id="scopeRing" style="--p:0deg">
-        <div><strong id="scopeProgress">—</strong><span>seções totalizadas</span></div>
-      </div>
-      <div class="hero-progress-meta">
-        <small id="scopeKicker">CONTEXTO ATUAL</small>
-        <strong id="scopeTitle">Presidente • Brasil</strong>
-        <span id="scopeSections">Aguardando TSE</span>
-        <span class="freshness" id="dataAge">idade do dado: —</span>
-      </div>
-    </article>
-  </section>
-
-  <section class="office-deck" aria-label="Cargos em disputa">
-    <button class="office-card active" data-office="president" type="button">
-      <span class="office-icon">PR</span><span><strong>Presidente</strong><small>Brasil ou UF</small></span><i>›</i>
-    </button>
-    <button class="office-card" data-office="governor" type="button">
-      <span class="office-icon">GV</span><span><strong>Governador</strong><small>Por UF</small></span><i>›</i>
-    </button>
-    <button class="office-card" data-office="senator" type="button">
-      <span class="office-icon">SN</span><span><strong>Senador</strong><small>2 vagas por UF</small></span><i>›</i>
-    </button>
-    <button class="office-card" data-office="federalDeputy" type="button">
-      <span class="office-icon">DF</span><span><strong>Dep. Federal</strong><small>Proporcional</small></span><i>›</i>
-    </button>
-    <button class="office-card" data-office="stateDeputy" type="button">
-      <span class="office-icon">DE</span><span><strong id="stateDeputyCardLabel">Dep. Estadual/Distrital</strong><small>Proporcional</small></span><i>›</i>
+    <button class="location-button" id="locationButton" type="button">
+      <span>Localidade</span><strong id="locationLabel">Brasil</strong><i>⌄</i>
     </button>
   </section>
 
-  <div class="notice waiting" id="notice" role="status" aria-live="polite">Aguardando a primeira leitura oficial.</div>
+  <div class="notice waiting" id="notice" role="status" aria-live="polite">Aguardando dados oficiais.</div>
 
-  <section class="visual-grid">
-    <article class="card map-panel">
-      <div class="panel-heading">
+  <section class="content-grid">
+    <article class="result-card">
+      <header class="result-head">
         <div>
-          <p class="eyebrow">BRASIL EM APURAÇÃO</p>
-          <h2>Avanço da totalização por UF</h2>
+          <div class="result-title-line">
+            <h2 id="raceTitle">Presidente</h2>
+            <span class="official-rule" id="raceRule">Maioria absoluta</span>
+          </div>
+          <p id="resultLocation">Brasil</p>
         </div>
-        <div class="map-actions">
-          <button id="brasilButton" class="scope-chip selected" type="button">Brasil</button>
-          <select id="scopeSelect" aria-label="Selecionar UF"></select>
+        <div class="progress-block">
+          <strong id="progressPct">—</strong>
+          <span>apuradas</span>
         </div>
+      </header>
+      <div class="progress-track"><span id="progressBar"></span></div>
+      <div class="progress-meta">
+        <span id="sectionsText">— seções</span>
+        <span id="lastUpdate">Última carga: —</span>
       </div>
-      <p class="subtle">Cada bloco representa uma UF. O anel mostra apenas o percentual de seções totalizadas; toque para abrir o contexto estadual.</p>
-      <div class="cartogram" id="cartogram" aria-label="Cartograma das unidades da Federação"></div>
-      <div class="map-legend"><span><i class="legend-ring"></i> avanço da totalização</span><span id="mapUpdated">UFs: aguardando leitura</span></div>
+
+      <section class="filters" id="filters">
+        <label class="search-field" id="searchField">
+          <span>Buscar candidato</span>
+          <input id="candidateSearch" type="search" inputmode="search" placeholder="Nome, número ou partido">
+        </label>
+        <label class="select-field" id="partyField">
+          <span>Partido</span>
+          <select id="partyFilter"><option value="">Todos os partidos</option></select>
+        </label>
+        <label class="check-field" id="electedField">
+          <input id="electedOnly" type="checkbox">
+          <span>Somente situação oficial definida</span>
+        </label>
+      </section>
+
+      <section class="candidate-section">
+        <div class="section-label">
+          <strong id="candidateSectionTitle">Candidaturas</strong>
+          <span id="candidateCount">—</span>
+        </div>
+        <div class="candidate-list" id="candidateList"></div>
+        <button class="show-all" id="showAllButton" type="button">Todos os candidatos</button>
+      </section>
+
+      <section class="vote-summary" aria-label="Resumo de votos">
+        <div><span>Brancos</span><strong id="blankVotes">—</strong><small id="blankPct">—</small></div>
+        <div><span>Nulos</span><strong id="nullVotes">—</strong><small id="nullPct">—</small></div>
+        <div><span>Válidos</span><strong id="validVotes">—</strong><small id="validPct">—</small></div>
+      </section>
+
+      <button class="state-cta" id="stateCta" type="button">
+        <span>Ver apuração por estado</span><i>›</i>
+      </button>
+
+      <details class="math-details">
+        <summary>Análise matemática da apuração</summary>
+        <div class="math-body" id="mathBody">
+          <p>Os cálculos usam apenas os dados oficiais já apurados e limites aritméticos derivados deles.</p>
+          <div class="math-cards" id="mathCards"></div>
+          <div class="math-band-wrap" id="mathBandWrap" hidden>
+            <div class="math-band-head"><span>Intervalo aritmético possível</span><strong id="mathBandHeadline">—</strong></div>
+            <div class="math-band"><span id="mathBand"></span><i id="mathMarker"></i></div>
+            <div class="math-band-labels"><span id="mathMin">—</span><span id="mathMid">—</span><span id="mathMax">—</span></div>
+          </div>
+        </div>
+      </details>
     </article>
 
-    <article class="card live-panel">
-      <div class="panel-heading">
-        <div><p class="eyebrow">AGORA</p><h2 id="selectedOfficeTitle">Presidente • Brasil</h2></div>
-        <span class="neutral-tag" id="officeRule">Maioria absoluta</span>
-      </div>
-
-      <div class="candidate-stage">
-        <div class="candidate-ring" id="candidateRing" style="--p:0deg">
-          <div><strong id="candidateShare">—</strong><span id="candidateShareLabel">participação nos válidos</span></div>
+    <aside class="side-column">
+      <section class="side-card">
+        <div class="side-card-head">
+          <div><p class="kicker">OUTROS CARGOS</p><h3 id="sideTitle">Resumo</h3></div>
+          <span class="uf-chip" id="sideUf">DF</span>
         </div>
-        <div class="candidate-main">
-          <small>CANDIDATURA SELECIONADA</small>
-          <h3 id="candidateName">Selecione uma candidatura</h3>
-          <p id="candidateParty">—</p>
-          <div class="candidate-pills"><span id="candidateNumber">nº —</span><span id="candidateVotes">— votos</span></div>
+        <div class="other-races" id="otherRaces"></div>
+      </section>
+
+      <section class="side-card latest-card">
+        <p class="kicker">DADOS DA CARGA</p>
+        <div class="latest-grid">
+          <div><span>Votos computados</span><strong id="totalVotes">—</strong></div>
+          <div><span>Eleitorado</span><strong id="electorate">—</strong></div>
+          <div><span>Em seções não totalizadas</span><strong id="remainingElectors">—</strong></div>
+          <div><span>Identificador da carga</span><strong id="generationId">—</strong></div>
         </div>
-      </div>
+      </section>
 
-      <div class="live-metrics">
-        <div><span>Seções</span><strong id="sectionsPct">—</strong><small id="sectionsCount">—</small></div>
-        <div><span>Válidos do cargo</span><strong id="validVotes">—</strong><small id="totalVotes">—</small></div>
-        <div><span>Última carga</span><strong id="deltaVotes">—</strong><small id="deltaShare">—</small></div>
-      </div>
-
-      <div class="math-visual" id="mathVisual">
-        <div class="math-visual-head"><span id="mathTitle">Leitura matemática</span><strong id="mathHeadline">—</strong></div>
-        <div class="math-track"><span id="mathBand"></span><i id="mathMarker"></i></div>
-        <div class="math-labels"><span id="mathMin">—</span><span id="mathCenter">—</span><span id="mathMax">—</span></div>
-        <p id="mathSummary">Os cálculos aparecerão quando houver dados oficiais suficientes.</p>
-      </div>
-    </article>
+      <section class="side-card comparison-hint">
+        <p class="kicker">COMPARAÇÃO</p>
+        <h3>Analise candidaturas lado a lado</h3>
+        <p>Use “Comparar” nos cards. Até quatro candidaturas podem ser fixadas no mesmo cargo e localidade.</p>
+        <button type="button" id="jumpCompare">Ver comparação <span id="compareBadge">0</span></button>
+      </section>
+    </aside>
   </section>
 
-  <section class="detail-grid">
-    <article class="card trend-panel">
-      <div class="panel-heading">
-        <div><p class="eyebrow">EVOLUÇÃO OBSERVADA</p><h2>Participação × avanço das seções</h2></div>
-        <span class="neutral-tag" id="historyPoints">0 cargas</span>
-      </div>
-      <p class="subtle">Somente cargas oficiais distintas já observadas neste navegador. A linha descreve o passado e não é extrapolada.</p>
-      <div class="chart-wrap"><svg id="historyChart" viewBox="0 0 1000 280" role="img" aria-label="Histórico observado da candidatura selecionada"></svg></div>
-    </article>
-
-    <article class="card candidate-browser">
-      <div class="panel-heading compact">
-        <div><p class="eyebrow">DRILL-DOWN</p><h2>Candidaturas</h2></div>
-        <span class="neutral-tag" id="candidateCount">—</span>
-      </div>
-      <label class="search-box" for="candidateSearch"><span>Buscar</span><input id="candidateSearch" type="search" inputmode="search" placeholder="Nome, número ou partido"></label>
-      <div class="candidate-list" id="candidateList" role="listbox" aria-label="Candidaturas"></div>
-      <p class="candidate-hint" id="candidateHint"></p>
-    </article>
-  </section>
-
-  <section class="card context-panel">
-    <div class="panel-heading">
-      <div><p class="eyebrow">COMO LER ESTE CARGO</p><h2 id="contextTitle">Presidente</h2></div>
-      <span class="neutral-tag">Sem projeção</span>
+  <section class="comparison-panel" id="comparisonPanel" hidden>
+    <div class="comparison-head">
+      <div><p class="kicker">ANÁLISE SIMULTÂNEA</p><h2>Candidaturas selecionadas</h2></div>
+      <button type="button" id="clearCompare">Limpar comparação</button>
     </div>
-    <div class="context-copy" id="contextCopy"></div>
+    <div class="comparison-cards" id="comparisonCards"></div>
+    <div class="comparison-chart" id="comparisonChartWrap" hidden>
+      <div class="chart-head">
+        <div><strong>Evolução observada</strong><span>participação × avanço das seções</span></div>
+        <div class="chart-legend" id="comparisonLegend"></div>
+      </div>
+      <svg id="comparisonChart" viewBox="0 0 1000 300" role="img" aria-label="Evolução das candidaturas comparadas"></svg>
+    </div>
   </section>
 
-  <section class="card method">
+  <section class="history-panel">
+    <div class="history-head">
+      <div><p class="kicker">EVOLUÇÃO OBSERVADA</p><h2 id="historyTitle">Candidatura selecionada</h2></div>
+      <span id="historyPoints">0 cargas</span>
+    </div>
+    <p>O histórico é formado apenas por cargas oficiais distintas observadas neste navegador; não há extrapolação.</p>
+    <svg id="historyChart" viewBox="0 0 1000 280" role="img" aria-label="Evolução histórica observada"></svg>
+  </section>
+
+  <section class="method-card">
     <details>
       <summary>Fonte, atualização e metodologia</summary>
-      <div class="method-body">
-        <p><strong>Fonte:</strong> arquivos JSON oficiais de resultado unificado (EA20) do Tribunal Superior Eleitoral.</p>
-        <p><strong>Atualização:</strong> o contexto aberto é consultado automaticamente em alta frequência. O cartograma das 27 UFs é atualizado em cadência separada e controlada.</p>
-        <p><strong>Visualização:</strong> cores e anéis do cartograma representam somente avanço da totalização, nunca desempenho de candidaturas.</p>
-        <p><strong>Matemática:</strong> os indicadores usam exclusivamente números já divulgados e limites aritméticos derivados deles; não há modelo de previsão eleitoral.</p>
+      <div>
+        <p><strong>Fonte:</strong> arquivos JSON oficiais de resultado unificado do Tribunal Superior Eleitoral.</p>
+        <p><strong>Atualização:</strong> o cargo aberto é consultado automaticamente em alta frequência, com pausa quando a aba fica em segundo plano e backoff temporário em falhas.</p>
+        <p><strong>Ordenação:</strong> o portal não ordena candidaturas por desempenho eleitoral. A lista usa número de urna para manter uma apresentação neutra.</p>
+        <p><strong>Situação oficial:</strong> selos só aparecem quando a própria carga oficial do TSE informa situação definida.</p>
       </div>
     </details>
   </section>
 </main>
 
-<footer>
-  <div><strong>Painel independente de acompanhamento</strong><p>Fonte: Tribunal Superior Eleitoral (TSE). Sem vínculo institucional com o TSE.</p></div>
-  <div class="footer-meta"><span id="lastUpdate">Última leitura: —</span><a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial</a></div>
+<div class="modal-backdrop" id="stateModal" hidden>
+  <section class="state-modal" role="dialog" aria-modal="true" aria-labelledby="stateModalTitle">
+    <header>
+      <div><p class="kicker">LOCALIDADE</p><h2 id="stateModalTitle">Escolha um estado</h2></div>
+      <button type="button" id="closeStateModal" aria-label="Fechar">×</button>
+    </header>
+    <label class="state-search"><span>Buscar estado</span><input id="stateSearch" type="search" placeholder="UF ou nome do estado"></label>
+    <button class="br-option" id="brOption" type="button">Brasil <span>Presidente</span></button>
+    <div class="state-grid" id="stateGrid"></div>
+  </section>
+</div>
+
+<footer class="footer">
+  <div><strong>Apuração 2026</strong><p>Painel independente. Fonte dos resultados: Tribunal Superior Eleitoral.</p></div>
+  <a href="https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados" target="_blank" rel="noreferrer">Documentação oficial do TSE</a>
 </footer>
 
-<script src="visual-core.js" defer></script>
-<script src="visual-ui.js" defer></script>
-<script src="compare.js" defer></script>
-<script src="visual-runtime.js" defer></script>
+<script src="uol-core.js" defer></script>
+<script src="uol-ui-1.js" defer></script>
+<script src="uol-ui-2.js" defer></script>
+<script src="uol-ui-3.js" defer></script>
+<script src="uol-runtime.js" defer></script>
 </body>
 </html>
