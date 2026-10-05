@@ -10,5 +10,64 @@ A.progressAnswer=async(p,r)=>{const uf=p.us[0]||A.state.lastUF,k=p.k||'governor'
 A.summaryAnswer=async(p,r)=>{const uf=p.us[0]||A.state.lastUF;A.state.lastUF=uf;localStorage.setItem(A.UK,uf);const ks=['president','governor','senator','federalDeputy','stateDeputy'],js=await Promise.all(ks.map(k=>A.get(k,uf)));A.reply(r,`<p><strong>${esc(uf)} • ${esc(UF[uf])}</strong> em uma tela:</p><div class="ask-summary-list">${ks.map((k,i)=>{const m=A.met(js[i]),e=A.elected(js[i],k);return`<button data-open="${k}" data-uf="${uf}"><span><strong>${esc(A.label(k,uf))}</strong><small>${e.items.length?(e.partial?e.items.length+' cadeiras na parcial':e.items.length+' eleitos'):'aguardando definição'}</small></span><b>${P.format(m.sections)}%</b></button>`}).join('')}</div>`,[`Como ficaram as cadeiras em ${uf}?`,`Quem foi eleito deputado estadual em ${uf}?`])};
 A.compareAnswer=async(p,r)=>{if(p.us.length<2)return A.fail(r);const k=p.k||'governor',rows=await Promise.all(p.us.slice(0,4).map(async uf=>({uf,m:A.met(await A.get(k,uf))})));A.reply(r,`<p>Comparação da carga atual de <strong>${esc(A.label(k,rows[0].uf))}</strong>:</p><div class="ask-table-wrap"><table><thead><tr><th>UF</th><th>Seções</th><th>Válidos</th><th>Brancos</th><th>Nulos</th></tr></thead><tbody>${rows.map(x=>`<tr><th>${x.uf}</th><td>${P.format(x.m.sections)}%</td><td>${F.format(x.m.validVotes)}</td><td>${F.format(x.m.blankVotes)}</td><td>${F.format(x.m.nullVotes)}</td></tr>`).join('')}</tbody></table></div><small class="ask-note">UFs mantidas na ordem da pergunta; sem ranking.</small>`)};
 A.unfinishedAnswer=async(p,r)=>{const k=p.k||'governor',out=[];let i=0;await Promise.all(Array.from({length:5},async()=>{while(i<CFG.ufs.length){const uf=CFG.ufs[i++];try{const j=await A.get(k,uf),m=A.met(j);if(m.sections<100||String(j.tf||'').toLowerCase()!=='s')out.push({uf,m})}catch{}}}));out.sort((a,b)=>a.uf.localeCompare(b.uf));A.reply(r,out.length?`<p><strong>${out.length}</strong> UFs ainda aparecem com totalização aberta na carga consultada.</p><div class="ask-progress-list">${out.map(x=>`<div><span>${x.uf} • ${esc(UF[x.uf])}</span><b>${P.format(x.m.sections)}%</b></div>`).join('')}</div>`:'<p>Não encontrei UFs com totalização aberta na consulta atual.</p>')};
-A.route=async(q,r)=>{const p={q,n:A.norm(q),us:A.ufs(q),k:A.office(q),i:A.intent(q)};if(p.i==='elected')return A.electedAnswer(p,r);if(p.i==='seats')return A.seatsAnswer(p,r);if(p.i==='votes')return A.votesAnswer(p,r);if(p.i==='progress')return A.progressAnswer(p,r);if(p.i==='compare')return A.compareAnswer(p,r);if(p.i==='summary')return A.summaryAnswer(p,r);if(p.i==='unfinished')return A.unfinishedAnswer(p,r);if(p.us.length)return A.summaryAnswer(p,r);return A.fail(r)};
+A.candidateVotesAnswer=async(p,r)=>{
+  const term=A.candidateTerm(p.q);
+  if(!term)return A.fail(r);
+
+  const matches=[];
+  const addMatches=(j,k,uf)=>{
+    for(const c of A.findCandidate(j,term))matches.push({c,j,k,uf});
+  };
+
+  if(p.k){
+    const uf=p.k==='president'?'BR':(p.us[0]||A.state.lastUF);
+    const j=await A.get(p.k,uf);
+    addMatches(j,p.k,uf);
+  }else{
+    const pj=await A.get('president','BR');
+    addMatches(pj,'president','BR');
+
+    if(!matches.length&&p.us[0]){
+      const uf=p.us[0];
+      for(const k of ['governor','senator','federalDeputy','stateDeputy']){
+        const j=await A.get(k,uf);
+        addMatches(j,k,uf);
+      }
+    }
+  }
+
+  if(!matches.length){
+    const where=p.us[0]?(' em '+p.us[0]):'';
+    return A.reply(r,`<p>Não encontrei uma candidatura correspondente a <strong>${esc(term)}</strong>${where} na consulta atual. Se for um cargo estadual, informe também a UF.</p>`,[
+      `Quantos votos ${term} teve para presidente?`,
+      `Quantos votos ${term} teve em MG?`
+    ]);
+  }
+
+  const unique=[];
+  const seen=new Set();
+  for(const m of matches){
+    const key=String(m.c.sqcand||'')+'|'+m.k+'|'+m.uf;
+    if(!seen.has(key)){seen.add(key);unique.push(m)}
+  }
+
+  if(unique.length>1){
+    return A.reply(r,`<p>Encontrei mais de uma candidatura para <strong>${esc(term)}</strong>. Escolha uma:</p><div class="ask-summary-list">${unique.slice(0,12).map(m=>`<button data-q="Quantos votos ${esc(m.c.nmu||m.c.nm)} teve para ${esc(A.label(m.k,m.uf).toLowerCase())} em ${m.uf}?"><span><strong>${esc(m.c.nmu||m.c.nm)}</strong><small>${esc(A.label(m.k,m.uf))} • ${esc(m.uf==='BR'?'Brasil':m.uf)}</small></span><b>${esc(m.c.n||'')}</b></button>`).join('')}</div>`);
+  }
+
+  const {c,j,k,uf}=unique[0];
+  const m=A.met(j);
+  const votes=Number(c.vap)||0;
+  const share=m.validVotes?100*votes/m.validVotes:0;
+  const rawStatus=String(c.st||'').trim();
+  const status=rawStatus||(String(c.e||'').toLowerCase()==='s'?'Situação definida pelo TSE':'');
+  const place=uf==='BR'?'Brasil':`${uf} • ${UF[uf]||''}`;
+
+  A.reply(r,`<p><strong>${esc(c.nmu||c.nm)}</strong> teve <strong>${F.format(votes)} votos</strong> para <strong>${esc(A.label(k,uf))}</strong> em <strong>${esc(place)}</strong>.</p><div class="ask-metrics"><div><span>Votos nominais</span><b>${F.format(votes)}</b></div><div><span>Participação nos válidos</span><b>${P.format(share)}%</b></div><div><span>Número</span><b>${esc(c.n||'—')}</b></div><div><span>Partido</span><b>${esc(c.party||'—')}</b></div></div>${status?`<p class="ask-candidate-status">${esc(status)}</p>`:''}${A.source(j,k,uf)}`,[
+    `Quem foi eleito para ${A.label(k,uf).toLowerCase()} ${uf==='BR'?'no Brasil':'em '+uf}?`,
+    `Qual foi a participação eleitoral ${uf==='BR'?'no Brasil':'em '+uf}?`
+  ]);
+};
+
+A.route=async(q,r)=>{const p={q,n:A.norm(q),us:A.ufs(q),k:A.office(q),i:A.intent(q)};if(p.i==='candidateVotes')return A.candidateVotesAnswer(p,r);if(p.i==='elected')return A.electedAnswer(p,r);if(p.i==='seats')return A.seatsAnswer(p,r);if(p.i==='votes')return A.votesAnswer(p,r);if(p.i==='progress')return A.progressAnswer(p,r);if(p.i==='compare')return A.compareAnswer(p,r);if(p.i==='summary')return A.summaryAnswer(p,r);if(p.i==='unfinished')return A.unfinishedAnswer(p,r);if(p.us.length)return A.summaryAnswer(p,r);return A.fail(r)};
 })(window.E360Ask);

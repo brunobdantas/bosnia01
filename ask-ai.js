@@ -1,7 +1,7 @@
 'use strict';
 
 (A=>{
-  const intents=new Set(['elected','seats','votes','progress','compare','summary','unfinished']);
+  const intents=new Set(['candidateVotes','elected','seats','votes','progress','compare','summary','unfinished']);
   const offices=new Set(['president','governor','senator','federalDeputy','stateDeputy']);
   const ufSet=new Set(['BR',...CFG.ufs]);
 
@@ -94,6 +94,7 @@
         done=true;
         A.state.aiReady=!!ok;
         A.state.aiLoadState=ok?'ready':'failed';
+        if(!ok)A._aiLoader=null;
         A.refreshAIStatus();
         resolve(!!ok);
       };
@@ -121,9 +122,12 @@
 
   A.activateAI=async()=>{
     if(!window.puter?.auth?.signIn){
-      A.toast('A IA ainda está carregando. Tente novamente em alguns segundos.');
-      A.loadAIProvider();
-      return false;
+      const loaded=await A.loadAIProvider();
+      if(!loaded||!window.puter?.auth?.signIn){
+        A.toast('A IA externa não carregou neste navegador. O modo local continua funcionando.');
+        A.refreshAIStatus();
+        return false;
+      }
     }
 
     if(A.isAISignedIn()){
@@ -207,6 +211,7 @@
   };
 
   A.executePlan=async(p,r)=>{
+    if(p.i==='candidateVotes')return A.candidateVotesAnswer(p,r);
     if(p.i==='elected')return A.electedAnswer(p,r);
     if(p.i==='seats')return A.seatsAnswer(p,r);
     if(p.i==='votes')return A.votesAnswer(p,r);
@@ -230,6 +235,7 @@
 
   A.canExecuteLocally=p=>{
     if(!p)return false;
+    if(p.i==='candidateVotes')return true;
     if(['votes','progress','summary','unfinished','compare'].includes(p.i))return p.i!=='compare'||p.us?.length>=2;
     if(['elected','seats'].includes(p.i))return !!p.k||p.i==='seats';
     return false;

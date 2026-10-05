@@ -9,7 +9,27 @@ A.norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerC
 A.setExplorer=v=>{document.body.classList.toggle('explorer-open',!!v);requestAnimationFrame(()=>document.querySelector(v?'.race-nav-wrap':'#experienceApp')?.scrollIntoView({behavior:'smooth',block:'start'}))};
 A.ufs=q=>{const raw=String(q).toLowerCase(),n=A.norm(q),r=[];if(n.includes('meu estado'))r.push(A.state.lastUF);for(const uf of CFG.ufs){if(new RegExp(`\\b${uf.toLowerCase()}\\b`).test(n))r.push(uf);for(const x of A.alias[uf].split(' '))if(x.length>4&&n.includes(x))r.push(uf)}if(raw.includes('pará'))r.push('PA');return[...new Set(r)]};
 A.office=q=>{const n=A.norm(q);for(const[k,a]of A.officeAliases)if(a.some(x=>n.includes(A.norm(x))))return k;return null};
-A.intent=q=>{const n=A.norm(q);if(/quais estados|que estados/.test(n)&&/(nao terminar|ainda nao|totaliza|apur)/.test(n))return'unfinished';if(/compare|comparar|comparacao/.test(n))return'compare';if(/cadeir|composicao|bancada|vagas|partidos/.test(n))return'seats';if(/quem foi eleito|eleitos|eleitas|quem ganhou/.test(n))return'elected';if(/participacao|comparecimento|brancos|nulos|validos/.test(n))return'votes';if(/apurad|totaliza|secoes|quanto falta|terminou/.test(n))return'progress';if(/resuma|resumo|panorama|como ficou/.test(n))return'summary';return'auto'};
+A.intent=q=>{const n=A.norm(q);if(/quais estados|que estados/.test(n)&&/(nao terminar|ainda nao|totaliza|apur)/.test(n))return'unfinished';if(/compare|comparar|comparacao/.test(n))return'compare';if(/cadeir|composicao|bancada|vagas|partidos/.test(n))return'seats';if(/quem foi eleito|eleitos|eleitas|quem ganhou/.test(n))return'elected';if((/quantos votos|votos .* teve|teve .* votos|recebeu .* votos|votos .* recebeu/.test(n))&&!/(brancos|nulos|validos|comparecimento|participacao)/.test(n))return'candidateVotes';if(/participacao|comparecimento|brancos|nulos|validos/.test(n))return'votes';if(/apurad|totaliza|secoes|quanto falta|terminou/.test(n))return'progress';if(/resuma|resumo|panorama|como ficou/.test(n))return'summary';return'auto'};
+A.candidateTerm=q=>{
+  let n=A.norm(q);
+  const words=['quantos','quanto','votos','voto','o','a','os','as','teve','tem','recebeu','recebe','conseguiu','obteve','candidato','candidata','presidente','presidencia','governador','governadora','senador','senado','deputado','deputada','federal','estadual','distrital','camara','assembleia','cldf','em','no','na','nos','nas','do','da','dos','das','de','brasil','eleicao','eleicoes','2026'];
+  const stop=new Set(words);
+  const ufWords=new Set();
+  for(const uf of CFG.ufs){
+    ufWords.add(uf.toLowerCase());
+    for(const x of A.alias[uf].split(' '))ufWords.add(x);
+  }
+  return n.split(' ').filter(x=>x&&x.length>1&&!stop.has(x)&&!ufWords.has(x)).join(' ').trim();
+};
+A.findCandidate=(j,term)=>{
+  const t=A.norm(term);
+  if(!t)return[];
+  const tokens=t.split(' ').filter(Boolean);
+  return A.flat(j).filter(c=>{
+    const name=A.norm((c.nmu||'')+' '+(c.nm||''));
+    return name.includes(t)||tokens.every(x=>name.includes(x));
+  });
+};
 A.url=(k,uf)=>{const o=OFFICES[k],t=(k==='president'?(uf||'BR'):(uf||A.state.lastUF)).toUpperCase(),c=k==='stateDeputy'?(t==='DF'?'0008':'0007'):o.code,e=String(o.election).padStart(6,'0'),s=t.toLowerCase();return`${CFG.base}/${o.election}/dados/${s}/${s}-c${c}-e${e}-u.json`};
 A.get=async(k,uf)=>{const t=(k==='president'?(uf||'BR'):(uf||A.state.lastUF)).toUpperCase(),ck=`${k}|${t}`,h=A.C.get(ck);if(h&&Date.now()-h.at<15000)return h.j;const ls=`e360-chat-${ck}`;try{const r=await fetch(A.url(k,t),{cache:'no-cache',headers:{Accept:'application/json'}});if(!r.ok)throw 0;const j=await r.json();A.C.set(ck,{j,at:Date.now()});try{localStorage.setItem(ls,JSON.stringify(j))}catch{}return j}catch{const x=localStorage.getItem(ls);if(x){const j=JSON.parse(x);A.C.set(ck,{j,at:Date.now()});return j}throw new Error('TSE indisponível')}};
 A.flat=j=>{const out=[];for(const c of j?.carg||[])(c.agr||[]).forEach((g,i)=>{for(const p of g.par||[])for(const x of p.cand||[])out.push({...x,party:p.sg||'',group:`${i}|${g.nm||''}`,seats:Number(g.vag)||0,dest:x.dvt||p.dvt||''})});return out};
